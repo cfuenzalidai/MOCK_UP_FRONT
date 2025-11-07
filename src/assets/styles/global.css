@@ -4,20 +4,42 @@
   --btn:#2a2b2f; --btn-border:#5a5b60;
 }
 *{box-sizing:border-box}
-html,body,#root{height:100%}
-body{margin:0;background:var(--bg);color:var(--text);font-family:system-ui,-apple-system,Segoe UI,Roboto,Ubuntu,Inter,Arial}
+html, body, #root { height: 100%; }
+body{
+  margin:0;
+  background:var(--bg);
+  color:var(--text);
+  font-family:system-ui,-apple-system,Segoe UI,Roboto,Ubuntu,Inter,Arial;
+}
+/* El contenedor React debe ser el flex-col */
+#root{
+  min-height:100dvh;
+  display:flex;
+  flex-direction:column;
+}
+/* La app ocupa el alto disponible */
+#root > .app{
+  flex:1;
+  display:flex;
+  flex-direction:column;
+}
+/* Zona central que empuja el footer */
+.main{ flex:1; min-height:0; }
+
 a{color:inherit;text-decoration:none}
 button{cursor:pointer}
 
 .nav{
-  height:64px; display:flex; align-items:center; justify-content:space-between;
+  height:6vh; min-height: 60px; display:flex; align-items:center; justify-content:space-between;
   padding:0 20px; background:#1b1c1f; border-bottom:1px solid #2a2b30;
   position:sticky; top:0; z-index:20;
+  font-size: 20px;
 }
 .nav-left, .nav-right{display:flex; align-items:center; gap:24px}
-.nav .brand{display:flex; align-items:center; gap:10px; font-weight:600}
-.nav .brand img{width:28px;height:28px}
+.nav .brand{display:flex; align-items:center; gap:10px; font-weight:600}    
+.nav .brand img{width:5vh; height:5vh; min-height: 60px; min-width: 60px;}
 .nav a{opacity:.9} .nav a:hover{opacity:1}
+.nav-right .avatar{width:5vh; height:5vh; min-height: 60px; min-width: 60px;}
 
 .footer{
   height:36px; display:flex; justify-content:space-between; align-items:center;
@@ -25,32 +47,39 @@ button{cursor:pointer}
   border-top:1px solid #2a2b30;
 }
 
-/* Hero */
+/* Fondo de pantalla del lobby */
 .hero{
-  position:relative; min-height:calc(100vh - 100px); /* nav + footer */
+  position:relative;
+  flex:1;
+  min-height:0; /* allow flex to size correctly */
   display:grid; grid-template-columns:1fr 420px; gap:24px; align-items:center;
   padding:24px; background:radial-gradient(1200px 600px at 60% 40%, #121318 0%, #0f0f10 60%, #0f0f10 100%);
 }
 .hero::before{
   content:""; position:absolute; inset:0;
-  background:url('/src/assets/img/bg-hero.jpg') center/cover no-repeat;
-  opacity:.35; filter:contrast(1.1) brightness(.9);
+  background:url('/src/assets/img/bg-hero.png') center/cover no-repeat;
+  opacity:.55; /* Que tan opaca se ve la imagen*/
+  filter:contrast(1.1) brightness(1);
 }
-.hero > *{position:relative}
 
 /* Paneles translúcidos */
 .panel{
-  background:rgba(28,28,31,.64);
-  border:1px solid rgba(255,255,255,.08);
+  background:rgba(28,28,31,.50);
+  border:1px solid rgba(255,255,255,.07);
   backdrop-filter: blur(6px);
   border-radius:26px; padding:24px;
-  box-shadow:0 6px 24px rgba(0,0,0,.35) inset, 0 10px 30px rgba(0,0,0,.25);
+  box-shadow:0 6px 24px rgba(0,0,0,.28) inset, 0 10px 30px rgba(0,0,0,.22);
 }
+.panel-right{ z-index: 2; max-width: 50vw;}
 
 /* Copy izquierda */
 .copy{
-  max-width:720px; line-height:1.7; font-size:20px;
-  text-align:left; color:var(--muted);
+  max-width: 30vw;
+  max-height: 50vh;
+  margin-right: -220px;  
+  position: relative;
+  z-index: 2;
+  font-size:2vh;
 }
 .copy strong{color:#ffd99a}
 .copy .c1{color:#a9b4ff}
@@ -61,32 +90,55 @@ button{cursor:pointer}
 /* Logo central */
 .logoWrap{
   position:absolute; left:50%; top:50%; transform:translate(-50%,-50%);
-  width:220px; height:220px; border-radius:50%;
-  background:radial-gradient(closest-side, rgba(255,255,255,.15), rgba(0,0,0,.4));
+  width: clamp(160px, 18vw, 420px);
+  height: clamp(160px, 18vw, 420px);
+  transition: width .22s ease, height .22s ease, transform .22s ease;
+  border-radius:50%;
+  background:radial-gradient(closest-side, rgba(255,255,255,.0), rgba(0,0,0,1));
   display:grid; place-items:center; box-shadow:0 0 0 6px rgba(255,255,255,.05), 0 20px 60px rgba(0,0,0,.5);
+  z-index: 4;
 }
-.logoWrap img{width:160px; height:160px; object-fit:contain; opacity:.95}
+.logoWrap img{
+  /* reduce image proportion slightly so it doesn't look oversized inside smaller containers */
+  width:85%;
+  height:85%;
+  object-fit:contain;
+  max-width:100%;
+  max-height:100%;
+  opacity:.95;
+}
 
 .cta{
   position:absolute; left:50%; transform:translateX(-50%);
-  bottom:48px; display:inline-block; padding:14px 24px; border-radius:12px;
-  background:#1f2023; border:1px solid #383a40; color:#eaeaf0; font-weight:600;
-  box-shadow:0 10px 20px rgba(0,0,0,.35);
+  bottom:88px;
+  display:inline-block;
+  padding:18px 28px;
+  border-radius:16px;
+  background:#232428;
+  border:1px solid #3f4248;
+  color:#eaeaf0; font-weight:700; font-size:2.5vh;
+  box-shadow:0 14px 28px rgba(0,0,0,.38), 0 0 0 1px rgba(255,255,255,.04) inset;
 }
+.cta:hover{ transform:translateX(-50%) translateY(-1px); }
 
 /* Panel derecho de chips */
 .chips{display:grid; gap:18px}
 .chip{
   display:flex; align-items:center; justify-content:center;
-  height:64px; border-radius:28px; background:var(--btn);
+  height:5vh; border-radius:28px; background:var(--btn);
   border:1px solid var(--btn-border); font-weight:600;
   box-shadow:inset 0 0 0 1px rgba(255,255,255,.04), 0 10px 20px rgba(0,0,0,.25);
+  font-size: 1.7vh;
+}
+
+@media (max-width: 1280px){
+  .logoWrap{ display: none; }         /* oculta logo al chocar con chips */
+  .copy{ margin-right: 0; }           /* vuelve el panel a su caja normal */
 }
 
 /* Responsive */
 @media (max-width: 980px){
   .hero{grid-template-columns:1fr; padding-bottom:96px}
-  .logoWrap{width:180px;height:180px}
-  .logoWrap img{width:130px;height:130px}
-  .cta{bottom:24px}
+  .logoWrap{display:none}     /* ocultar logo en colapso */
+  .cta{bottom:40px}
 }

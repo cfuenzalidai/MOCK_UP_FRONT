@@ -17,7 +17,7 @@ export default function NavBar(){
       <div className="nav-right">
         <Link to="/login">Ingresar</Link>
         <Link to="/registro">Registrarse</Link>
-        <img src={UserIcon} alt="Perfil" width={28} height={28} />
+        <img className="avatar" src={UserIcon} alt="Perfil" />
       </div>
     </header>
   );

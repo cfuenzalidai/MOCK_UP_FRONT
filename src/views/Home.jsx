@@ -18,14 +18,14 @@ export default function Home(){
         </p>
       </div>
 
-      {/* logo central + CTA */}
+      {/* logo central*/}
       <div className="logoWrap">
         <img src={Logo} alt="Apogeo" />
       </div>
       <a className="cta" href="/registro">¡Regístrate Ahora!</a>
 
       {/* panel derecho con chips */}
-      <div className="panel">
+      <div className="panel panel-right">
         <div className="chips">
           <div className="chip">3-6 jugadores</div>
           <div className="chip">Turnos asincrónicos</div>
