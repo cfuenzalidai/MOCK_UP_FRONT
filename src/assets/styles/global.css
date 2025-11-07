@@ -22,9 +22,14 @@ body{
   flex:1;
   display:flex;
   flex-direction:column;
+  min-height: 0;
 }
 /* Zona central que empuja el footer */
-.main{ flex:1; min-height:0; }
+.main{ 
+    flex:1;
+    min-height:0;
+    display: flex;
+}
 
 a{color:inherit;text-decoration:none}
 button{cursor:pointer}
@@ -142,3 +147,25 @@ button{cursor:pointer}
   .logoWrap{display:none}     /* ocultar logo en colapso */
   .cta{bottom:40px}
 }
+
+/* Avatar y dropdown */
+.avatarWrap{ position:relative; }
+.avatarBtn{
+  border:0; background:transparent; padding:0; display:grid; place-items:center;
+}
+.avatar{
+  width:5vh; height:5vh; border-radius:50%;
+  object-fit:cover; border:1px solid #3b3c40;
+}
+.dropdown{
+  position:absolute; right:0; top:calc(100% + 10px);
+  min-width:220px; padding:8px;
+  background:#232427; border:1px solid #3a3b41; border-radius:12px;
+  box-shadow:0 10px 30px rgba(0,0,0,.35);
+  display:grid; gap:6px; z-index:30;
+}
+.dropdown a, .dropdown button{
+  text-align:left; padding:10px 12px; border-radius:8px; border:0; background:transparent; color:#e6e7ea;
+}
+.dropdown a:hover, .dropdown button:hover{ background:#2b2c31; }
+.dropdown .danger{ color:#ffb0b0; }
