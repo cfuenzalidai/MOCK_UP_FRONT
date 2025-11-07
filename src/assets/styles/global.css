@@ -1,0 +1,92 @@
+:root{
+  --bg:#0f0f10; --panel:#1c1c1f; --panel-soft:#222326;
+  --text:#e8e8ea; --muted:#b9b9be; --primary:#ffc86b; --accent:#7ec8ff;
+  --btn:#2a2b2f; --btn-border:#5a5b60;
+}
+*{box-sizing:border-box}
+html,body,#root{height:100%}
+body{margin:0;background:var(--bg);color:var(--text);font-family:system-ui,-apple-system,Segoe UI,Roboto,Ubuntu,Inter,Arial}
+a{color:inherit;text-decoration:none}
+button{cursor:pointer}
+
+.nav{
+  height:64px; display:flex; align-items:center; justify-content:space-between;
+  padding:0 20px; background:#1b1c1f; border-bottom:1px solid #2a2b30;
+  position:sticky; top:0; z-index:20;
+}
+.nav-left, .nav-right{display:flex; align-items:center; gap:24px}
+.nav .brand{display:flex; align-items:center; gap:10px; font-weight:600}
+.nav .brand img{width:28px;height:28px}
+.nav a{opacity:.9} .nav a:hover{opacity:1}
+
+.footer{
+  height:36px; display:flex; justify-content:space-between; align-items:center;
+  padding:0 16px; background:#1b1c1f; color:var(--muted); font-size:12px;
+  border-top:1px solid #2a2b30;
+}
+
+/* Hero */
+.hero{
+  position:relative; min-height:calc(100vh - 100px); /* nav + footer */
+  display:grid; grid-template-columns:1fr 420px; gap:24px; align-items:center;
+  padding:24px; background:radial-gradient(1200px 600px at 60% 40%, #121318 0%, #0f0f10 60%, #0f0f10 100%);
+}
+.hero::before{
+  content:""; position:absolute; inset:0;
+  background:url('/src/assets/img/bg-hero.jpg') center/cover no-repeat;
+  opacity:.35; filter:contrast(1.1) brightness(.9);
+}
+.hero > *{position:relative}
+
+/* Paneles translúcidos */
+.panel{
+  background:rgba(28,28,31,.64);
+  border:1px solid rgba(255,255,255,.08);
+  backdrop-filter: blur(6px);
+  border-radius:26px; padding:24px;
+  box-shadow:0 6px 24px rgba(0,0,0,.35) inset, 0 10px 30px rgba(0,0,0,.25);
+}
+
+/* Copy izquierda */
+.copy{
+  max-width:720px; line-height:1.7; font-size:20px;
+  text-align:left; color:var(--muted);
+}
+.copy strong{color:#ffd99a}
+.copy .c1{color:#a9b4ff}
+.copy .c2{color:#9ee37d}
+.copy .c3{color:#71d0ff}
+.copy .c4{color:#ff8c8c}
+
+/* Logo central */
+.logoWrap{
+  position:absolute; left:50%; top:50%; transform:translate(-50%,-50%);
+  width:220px; height:220px; border-radius:50%;
+  background:radial-gradient(closest-side, rgba(255,255,255,.15), rgba(0,0,0,.4));
+  display:grid; place-items:center; box-shadow:0 0 0 6px rgba(255,255,255,.05), 0 20px 60px rgba(0,0,0,.5);
+}
+.logoWrap img{width:160px; height:160px; object-fit:contain; opacity:.95}
+
+.cta{
+  position:absolute; left:50%; transform:translateX(-50%);
+  bottom:48px; display:inline-block; padding:14px 24px; border-radius:12px;
+  background:#1f2023; border:1px solid #383a40; color:#eaeaf0; font-weight:600;
+  box-shadow:0 10px 20px rgba(0,0,0,.35);
+}
+
+/* Panel derecho de chips */
+.chips{display:grid; gap:18px}
+.chip{
+  display:flex; align-items:center; justify-content:center;
+  height:64px; border-radius:28px; background:var(--btn);
+  border:1px solid var(--btn-border); font-weight:600;
+  box-shadow:inset 0 0 0 1px rgba(255,255,255,.04), 0 10px 20px rgba(0,0,0,.25);
+}
+
+/* Responsive */
+@media (max-width: 980px){
+  .hero{grid-template-columns:1fr; padding-bottom:96px}
+  .logoWrap{width:180px;height:180px}
+  .logoWrap img{width:130px;height:130px}
+  .cta{bottom:24px}
+}
