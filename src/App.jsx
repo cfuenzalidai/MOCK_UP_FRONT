@@ -1,38 +1,35 @@
-import { BrowserRouter, Routes, Route, Link } from 'react-router-dom';
+import { BrowserRouter, Routes, Route } from 'react-router-dom';
+import { AuthProvider } from './context/AuthContext';
+import NavBar from './components/NavBar';
+import Footer from './components/Footer';
+import Home from './views/Home';
 
-function Home() {
-  return <h1>Frontenders</h1>;
-}
+function Placeholder({ title }) { return <div style={{ padding:24 }}><h2>{title}</h2></div>; }
 
-function Instrucciones() {
-  return <h2>Instrucciones</h2>;
-}
-
-function Nosotros() {
-  return <h2>Nosotros</h2>;
-}
-
-function Partida() {
-  return <h2>Partida</h2>;
-}
-
-export default function App() {
+export default function App(){
   return (
     <BrowserRouter>
-      <nav style={{ padding: 12, display: 'flex', gap: 12, borderBottom: '1px solid #ddd' }}>
-        <Link to="/">Inicio</Link>
-        <Link to="/instrucciones">Instrucciones</Link>
-        <Link to="/nosotros">Nosotros</Link>
-        <Link to="/partida">Partida</Link>
-      </nav>
-      <main style={{ padding: 16 }}>
-        <Routes>
-          <Route path="/" element={<Home />} />
-          <Route path="/instrucciones" element={<Instrucciones />} />
-          <Route path="/nosotros" element={<Nosotros />} />
-          <Route path="/partida" element={<Partida />} />
-        </Routes>
-      </main>
+      <div className="app">
+        <AuthProvider>
+          <NavBar />
+          <div className="main">
+            <Routes>
+              <Route path="/" element={<Home />} />
+              <Route path="/como-jugar" element={<Placeholder title="Cómo Jugar" />} />
+              <Route path="/reglas" element={<Placeholder title="Reglas" />} />
+              <Route path="/partidas" element={<Placeholder title="Partidas Públicas" />} />
+              <Route path="/login" element={<Placeholder title="Ingresar" />} />
+              <Route path="/registro" element={<Placeholder title="Registro" />} />
+              <Route path="/partidas/nueva" element={<Placeholder title="Crear Partida" />} />
+              <Route path="/usuario/editar" element={<Placeholder title="Editar Usuario" />} />
+              <Route path="/usuario/clave" element={<Placeholder title="Cambiar contraseña" />} />
+              <Route path="/config" element={<Placeholder title="Configuración" />} />
+            </Routes>
+          </div>
+          <Footer />
+        </AuthProvider>
+      </div>
     </BrowserRouter>
   );
 }
+  
