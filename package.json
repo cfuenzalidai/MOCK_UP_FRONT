@@ -8,6 +8,7 @@
   "name": "Frontenders_front_252s2",
   "packageManager": "yarn@4.9.1",
   "dependencies": {
+    "axios": "^1.13.2",
     "react": "^19.2.0",
     "react-dom": "^19.2.0",
     "react-router-dom": "^7.9.5"
