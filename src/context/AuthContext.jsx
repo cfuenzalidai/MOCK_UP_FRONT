@@ -1,30 +1,88 @@
 import { createContext, useContext, useEffect, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
+import * as authService from '../services/auth';
+import { registerLogoutHandler, clearToken } from '../services/api';
 
 const Ctx = createContext(null);
 export const useAuth = () => useContext(Ctx);
 
-/* Guarda/lee solo 'user' desde localStorage.
-   Integraremos login real más adelante. */
 export function AuthProvider({ children }) {
   const [user, setUser] = useState(null);
+  const [booting, setBooting] = useState(true);
+  const navigate = useNavigate();
 
+  // Register API 401 handler -> logout
   useEffect(() => {
-    try {
-      const raw = localStorage.getItem('user');
-      if (raw) setUser(JSON.parse(raw));
-    } catch {}
+    registerLogoutHandler(() => {
+      clearToken();
+      setUser(null);
+      navigate('/login');
+    });
+  }, [navigate]);
+
+  // Sesión Bootstrap de token
+  useEffect(() => {
+    let mounted = true;
+    async function bootstrap() {
+      const token = localStorage.getItem('token');
+      if (!token) {
+        if (mounted) setBooting(false);
+        return;
+      }
+      try {
+        const u = await authService.me();
+        if (mounted) setUser(u);
+      } catch (err) {
+        // invalid token
+        clearToken();
+        if (mounted) setUser(null);
+      } finally {
+        if (mounted) setBooting(false);
+      }
+    }
+    bootstrap();
+    return () => (mounted = false);
   }, []);
 
-  function setMockUser(u) {
+  async function login(creds) {
+    const res = await authService.login(creds);
+    // login retorna { access_token, user }
+    const u = res?.user || null;
     setUser(u);
-    localStorage.setItem('user', JSON.stringify(u));
+    return u;
+  }
+
+  async function signup(payload) {
+    // crea el usuario y luego hace auto-login con las credenciales proporcionadas
+    await authService.signup(payload);
+    const res = await authService.login({ email: payload.email, password: payload.password });
+    const u = res?.user || null;
+    setUser(u);
+    return u;
   }
 
   function logout() {
-    localStorage.removeItem('user');
-    localStorage.removeItem('token'); // por si ya existe
+    clearToken();
     setUser(null);
+    navigate('/');
   }
 
-  return <Ctx.Provider value={{ user, setUser: setMockUser, logout }}>{children}</Ctx.Provider>;
+  async function updateMe(payload) {
+    await authService.updateMe(payload);
+    const u = await authService.me();
+    setUser(u);
+    return u;
+  }
+
+  async function createPartida() {
+    const res = await authService.createPartida();
+    // el backend podría retornar { id } o el recurso creado
+    return res?.data?.id || res?.data?.partida?.id || res?.data?.id_partida || res?.data;
+  }
+
+  return (
+    <Ctx.Provider value={{ user, booting, login, signup, logout, updateMe, createPartida }}>
+      {children}
+    </Ctx.Provider>
+  );
 }
