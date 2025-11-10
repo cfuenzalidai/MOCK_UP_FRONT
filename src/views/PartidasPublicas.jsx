@@ -1,4 +1,7 @@
 import { useEffect, useState } from 'react';
+import { useAuth } from '../context/AuthContext';
+import api from '../services/api';
+import '../assets/styles/partidas.css'; 
 
 function StatusPill({ full, onClick }) {
   const cls = full ? 'pill danger' : 'pill success';
@@ -12,39 +15,42 @@ function StatusPill({ full, onClick }) {
 
 export default function PartidasPublicas() {
   const [rows, setRows] = useState([]);
+  const [joining, setJoining] = useState(null);
+  const { user } = useAuth();
 
   useEffect(() => {
-    const url = `${import.meta.env.VITE_API_URL}/partidas`; // ajusta si tu endpoint difiere
-    (async () => {
+    let mounted = true;
+    async function fetchPartidas() {
       try {
-        const r = await fetch(url);
-        if (!r.ok) throw new Error('HTTP ' + r.status);
-        const data = await r.json();
-        /* Normaliza a: { id, nombre, jugadores, max } */
-        const list = (Array.isArray(data) ? data : data?.items || []).map((p, i) => ({
-          id: p.id ?? i + 1,
-          nombre: p.nombre ?? `Partida ${p.id ?? i + 1}`,
-          jugadores: p.jugadores ?? p.current ?? 0,
-          max: p.max ?? p.capacidad ?? 6,
-        }));
-        setRows(list);
-      } catch {
-        // Fallback de mock para diseño
-        setRows([
-          { id: 24, nombre: 'Partida 24', jugadores: 5, max: 5 },
-          { id: 32, nombre: 'Partida 32', jugadores: 6, max: 6 },
-          { id: 57, nombre: 'Partida 57', jugadores: 4, max: 6 },
-          { id: 12, nombre: 'Partida 12', jugadores: 6, max: 6 },
-          { id: 67, nombre: 'Partida 67', jugadores: 2, max: 6 },
-          { id: 9,  nombre: 'Partida 9',  jugadores: 4, max: 4 },
-        ]);
+        // usa el axios instance que añade Authorization desde localStorage
+        const res = await api.get('/partidas');
+        const data = res?.data;
+        if (mounted) setRows(Array.isArray(data) ? data : []);
+      } catch (e) {
+        console.error('Error fetching partidas', e);
+        if (mounted) setRows([]);
       }
-    })();
-  }, []);
+    }
+    fetchPartidas();
+    return () => (mounted = false);
+  }, [user]);
 
   function join(id) {
-    // TODO: POST /partidas/:id/unirse
-    alert(`Unirse a partida ${id}`);
+    // POST /partidas/:id/unirse - usa `api` para que incluya el JWT automáticamente
+    return (async () => {
+      try {
+        setJoining(id);
+        await api.post(`/partidas/${id}/unirse`);
+        // refrescar lista
+        const res = await api.get('/partidas');
+        setRows(Array.isArray(res?.data) ? res.data : []);
+      } catch (err) {
+        console.error('Error al unirse a partida', err);
+        alert('No se pudo unir a la partida. Revisa la consola.');
+      } finally {
+        setJoining(null);
+      }
+    })();
   }
 
   return (
