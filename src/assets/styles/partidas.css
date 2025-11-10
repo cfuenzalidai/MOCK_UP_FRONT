@@ -1,0 +1,83 @@
+/* Centra el panel dentro del hero existente */
+.partidas.hero{
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  grid-template-columns: initial; /* anula grid si global.css lo define */
+  padding-top: 32px;
+  padding-bottom: 32px;
+}
+
+/* Panel central */
+.partidas .pp-board{
+  width: clamp(520px, 52vw, 760px);
+  padding: 28px 32px;
+  border-radius: 28px;
+  text-align: center;
+
+  /* cristal oscuro */
+  background: rgba(0,0,0,.55);
+  backdrop-filter: blur(4px);
+  box-shadow: 0 10px 30px rgba(0,0,0,.22) inset, 0 14px 34px rgba(0,0,0,.25);
+  border: 1px solid rgba(255,255,255,.06);
+}
+
+.partidas .pp-title{
+  margin: 8px 0 20px;
+  font-size: 36px;
+  letter-spacing: .5px;
+}
+
+.partidas .pp-list{
+  list-style: none;
+  margin: 0;
+  padding: 8px 0;
+  display: grid;
+  gap: 12px;
+}
+
+.partidas .pp-row{
+  display: grid;
+  grid-template-columns: 1fr auto auto; /* nombre | conteo | pill */
+  align-items: center;
+  gap: 18px;
+  padding: 10px 14px;
+  border-radius: 12px;
+
+  background: rgba(255,255,255,.04);
+  border: 1px solid rgba(255,255,255,.06);
+}
+
+.partidas .pp-row .name{ justify-self: start; font-weight: 600; }
+.partidas .pp-row .count{ justify-self: center; opacity: .9; }
+
+/* Pills */
+.partidas .pp-pill{
+  justify-self: end;
+  padding: 6px 14px;
+  border-radius: 14px;
+  font-weight: 600;
+  border: 1px solid;
+  background: transparent;
+}
+.partidas .pp-pill.success{
+  color: #a7e6a7; border-color:#4b6b4b; background: rgba(46,97,46,.25);
+}
+.partidas .pp-pill.success:hover{ filter: brightness(1.1); }
+.partidas .pp-pill.danger{
+  color:#f3b5b5; border-color:#6b4b4b; background: rgba(97,46,46,.25);
+}
+.partidas .pp-pill:disabled{ opacity:.8; cursor:not-allowed; }
+
+/* Responsive */
+@media (max-width: 600px){
+  .partidas .pp-board{ width: 92vw; padding: 22px; }
+  .partidas .pp-row{
+    grid-template-columns: 1fr auto;
+    grid-template-areas: "name pill" "count pill";
+    row-gap: 6px;
+  }
+  .partidas .pp-row .name{ grid-area: name; }
+  .partidas .pp-row .count{ grid-area: count; justify-self: start; opacity:.8; }
+  .partidas .pp-pill{ grid-area: pill; }
+}
