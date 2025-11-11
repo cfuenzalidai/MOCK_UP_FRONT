@@ -1,0 +1,40 @@
+/* --- Centrado del mapa --- */
+.mapa-container {
+  display: flex;
+  justify-content: center;  /* centra horizontalmente */
+  align-items: center;      /* centra verticalmente si hay espacio */
+  width: 100%;
+  /* don't force a large min-height (vh) — let the container shrink when zooming */
+  min-height: auto;
+}
+
+.map-svg {
+  display: block;
+  /* Make the SVG scale with its container so it responds to page zoom.
+     Use a stricter max-width so the map reduces size more when zooming out. */
+  width: 100%;
+  height: auto;
+  max-width: 90vw;
+  max-height: 80vh;
+}
+
+/* --- Configura la grilla o disposición de los territorios --- */
+.mapa {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 12px; /* espacio entre T1, T2, etc. */
+  max-width: 1000px; /* ajusta según cuán grande sea el tablero */
+}
+
+/* --- Cada territorio individual --- */
+.territorio {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  color: white;
+  border: 1px solid #999;
+  width: 70px;
+  height: 100px;
+  text-align: center;
+}
