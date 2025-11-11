@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useAuth } from '../context/AuthContext';
 import api from '../services/api';
-import '../assets/styles/partidas.css'; 
+import '../assets/styles/partidas-publicas.css'; 
 
 function StatusPill({ full, onClick }) {
   const cls = full ? 'pill danger' : 'pill success';

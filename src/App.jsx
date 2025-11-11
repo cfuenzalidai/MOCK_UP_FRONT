@@ -33,7 +33,7 @@ function AppContent(){
               <Route path="/reglas" element={<Reglas />} />
               <Route path="/partidas" element={<Partida />} />
               <Route path="/nosotros" element={<Nosotros />} />
-//               <Route path="/partidas" element={<PartidasPublicas/>} />
+              <Route path="/partidas-publicas" element={<PartidasPublicas/>} />
               <Route path="/login" element={<Login />} />
               <Route path="/registro" element={<Registro />} />
               <Route path="/partidas/nueva" element={<ProtectedRoute><CreatePartida /></ProtectedRoute>} />
