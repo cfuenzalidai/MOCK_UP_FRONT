@@ -50,6 +50,10 @@ export default { login, signup, me, updateMe, createPartida };
 // Cambiar contraseña: requiere que el backend exponga POST /usuarios/:id/password
 export async function changePassword({ userId, currentPassword, newPassword }) {
 	if (!userId) throw new Error('userId requerido');
-	return api.post(`/usuarios/${userId}/password`, { currentPassword, newPassword });
+	// Añadimos una cabecera para suprimir el logout automático en caso de 401
+	// porque 401 puede indicar "contraseña actual incorrecta" (caso de negocio).
+	return api.post(`/usuarios/${userId}/password`, { currentPassword, newPassword }, {
+		headers: { 'X-Suppress-Logout': '1' }
+	});
 }
 

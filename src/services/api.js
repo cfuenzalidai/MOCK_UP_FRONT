@@ -18,15 +18,19 @@ api.interceptors.request.use((cfg) => {
 	return cfg;
 });
 
-// On 401 -> call registered logout handler (if any)
 // Para 401 -> llama al logout handler registrado (si existe)
 api.interceptors.response.use(
 	(r) => r,
 	(err) => {
-		if (err?.response?.status === 401) {
-			try {
-				if (_logoutHandler) _logoutHandler();
-			} catch (e) {}
+		// Si recibimos 401, por defecto llamamos al logout handler. Sin embargo,
+		// algunos endpoints (por ejemplo: cambio de contraseña) usan 401 como
+		// código de negocio para "credenciales inválidas" y no deben forzar el
+		// logout del usuario. Para permitir excepciones, el request puede enviar
+		// la cabecera 'X-Suppress-Logout: 1' para evitar esta lógica.
+		const status = err?.response?.status;
+		const suppress = err?.config?.headers?.['X-Suppress-Logout'] === '1';
+		if (status === 401 && !suppress) {
+			try { if (_logoutHandler) _logoutHandler(); } catch (e) {}
 		}
 		return Promise.reject(err);
 	}
