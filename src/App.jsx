@@ -32,6 +32,7 @@ function AppContent(){
               <Route path="/como-jugar" element={<Instrucciones />} />
               <Route path="/reglas" element={<Reglas />} />
               <Route path="/partidas" element={<Partida />} />
+              <Route path="/partidas/:partidaId" element={<Partida />} />
               <Route path="/nosotros" element={<Nosotros />} />
               <Route path="/partidas-publicas" element={<PartidasPublicas/>} />
               <Route path="/login" element={<Login />} />
