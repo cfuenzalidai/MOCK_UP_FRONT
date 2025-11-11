@@ -75,7 +75,11 @@ button{cursor:pointer}
   border-radius:26px; padding:24px;
   box-shadow:0 6px 24px rgba(0,0,0,.28) inset, 0 10px 30px rgba(0,0,0,.22);
 }
-.panel-right{ z-index: 2; max-width: 50vw;}
+.panel-right{ 
+  z-index: 2;
+  max-width: 50vw;
+  margin-right: 3vw;
+}
 
 /* Copy izquierda */
 .copy{
