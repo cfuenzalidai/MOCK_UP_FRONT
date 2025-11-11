@@ -1,0 +1,103 @@
+.nosotros.hero{
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  grid-template-columns: initial; /* anula grid si viene de global */
+  padding-top:32px;
+  padding-bottom:32px;
+}
+
+/* Panel principal: ahora es más alto y distribuye verticalmente su contenido */
+.nos-board{
+  width: clamp(920px, 90vw, 1480px);
+  padding: 36px 48px;
+  border-radius: 28px;
+  text-align: center;
+  min-height: 760px; /* mayor altura del panel */
+
+  /* layout: distribuir verticalmente título, descripción y grid */
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  align-items: center;
+
+  background: rgba(0,0,0,.88); /* opacidad del panel */
+  backdrop-filter: blur(4px);
+  box-shadow: 0 10px 30px rgba(0,0,0,.22) inset, 0 14px 34px rgba(0,0,0,.25);
+  border: 1px solid rgba(255,255,255,.08);
+}
+
+.nos-title{
+  margin: 8px 0 16px;
+  font-size: 66px;
+  letter-spacing: .5px;
+}
+
+.nos-desc{
+  margin: 0 auto 18px;
+  max-width: 40vw;
+  color: var(--muted);
+  line-height: 1.6;
+  text-align: justify;
+  font-size: 26px;
+}
+
+.nos-board > .nos-title,
+.nos-board > .nos-desc,
+.nos-board > .nos-grid {
+  width: 100%;
+  max-width: 980px; /* ajusta según prefieras */
+}
+.nos-board > .nos-desc {
+  margin: 0 auto; /* mantener centrado sin margen inferior grande */
+}
+
+.nos-desc .c1{ color: #a9b4ff; } /* c1 */
+.nos-desc .c2{ color: #9ee37d; } /* c2 */
+.nos-desc .c3{ color: #71d0ff; } /* c3 */
+.nos-desc .c4{ color: #ff8c8c; } /* c4 */
+
+/* Cards */
+.nos-grid{
+  list-style:none; margin: 8px 0 0; padding:0;
+  display:grid; gap:16px;
+  grid-template-columns: repeat(3, 1fr);
+}
+
+.nos-card{
+  display:flex; align-items:center; gap:14px;
+  padding: 12px 14px;
+  border-radius: 16px;
+  background: rgba(255,255,255,.04);
+  border: 1px solid rgba(255,255,255,.06);
+}
+
+.avatar-wrap{
+  width: 144px; height: 144px; border-radius: 50%;
+  overflow: hidden; flex: 0 0 auto;
+  border: 1px solid #3b3c40;
+  box-shadow: 0 4px 12px rgba(0,0,0,.25);
+}
+
+/* Fuerza que la imagen ocupe todo el contenedor circular y quede centrada */
+.nos-board .avatar,
+.nos-card .avatar,
+.avatar-wrap .avatar {
+  display: block;
+  width: 100% !important;
+  height: 100% !important;
+  object-fit: cover;
+  object-position: center center;
+  border-radius: 50%;
+}
+
+.meta .name{ margin:0; font-size: 18px; font-weight: 700; }
+.meta .role{ margin:2px 0 0; color: var(--muted); font-size: 14px; }
+
+/* Responsive */
+@media (max-width: 900px){
+  .nos-board{ width: 92vw; padding: 20px; min-height: auto; }
+  .nos-grid{ grid-template-columns: 1fr; }
+  .avatar-wrap{ width: 64px; height: 64px; }
+  .nos-desc{ max-width: 92vw; }
+}

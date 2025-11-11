@@ -36,11 +36,11 @@ button{cursor:pointer}
 
 .nav{
   height:6vh; min-height: 60px; display:flex; align-items:center; justify-content:space-between;
-  padding:0 20px; background:#1b1c1f; border-bottom:1px solid #2a2b30;
+  padding:0 30px; background:#1b1c1f; border-bottom:1px solid #2a2b30;
   position:sticky; top:0; z-index:20;
   font-size: 20px;
 }
-.nav-left, .nav-right{display:flex; align-items:center; gap:24px}
+.nav-left, .nav-right{display:flex; align-items:center; gap:44px}
 .nav .brand{display:flex; align-items:center; gap:10px; font-weight:600}    
 .nav .brand img{width:5vh; height:5vh; min-height: 60px; min-width: 60px;}
 .nav a{opacity:.9} .nav a:hover{opacity:1}
