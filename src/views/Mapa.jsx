@@ -46,7 +46,7 @@ export default function Mapa() {
   const COLOR = {
     especia: '#ef4444', // rojo
     liebre: '#edd3b0',  // beige
-    metal: '#000000ff',   // blanco puro
+    metal: '#000000ff',   // negro
     agua: '#60a5fa'     // celeste
   };
   const pool = seededShuffle([
@@ -195,7 +195,6 @@ export default function Mapa() {
             <line key={i} x1={e.a[0]} y1={e.a[1]} x2={e.b[0]} y2={e.b[1]} />
           ))}
         </g>
-        {/* Selected territory border overlay (draw on top) */}
         {selectedId != null && (() => {
           const sel = geometries.find(g => g.id === selectedId);
           if (!sel) return null;

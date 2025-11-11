@@ -32,7 +32,7 @@ export default function NavBar(){
         </Link>
         <Link to="/como-jugar">Cómo Jugar</Link>
         <Link to="/reglas">Reglas</Link>
-        <Link to="/partidas">Partidas Públicas</Link>
+        <Link to="/partidas-publicas">Partidas Públicas</Link>
         <Link to="/nosotros">Nosotros</Link>
       </div>
 
