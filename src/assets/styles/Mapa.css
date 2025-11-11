@@ -1,0 +1,178 @@
+/* --- Centrado del mapa --- */
+.mapa-container {
+  display: flex;
+  justify-content: center;  /* centra horizontalmente */
+  align-items: center;      /* centra verticalmente si hay espacio */
+  width: 100%;
+  /* don't force a large min-height (vh) — let the container shrink when zooming */
+  min-height: auto;
+}
+
+.map-svg {
+  display: block;
+  /* Make the SVG scale with its container so it responds to page zoom.
+     Use a stricter max-width so the map reduces size more when zooming out. */
+  width: 100%;
+  height: auto;
+  max-width: 90vw;
+  max-height: 80vh;
+}
+
+/* --- Configura la grilla o disposición de los territorios --- */
+.mapa {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 12px; /* espacio entre T1, T2, etc. */
+  max-width: 1000px; /* ajusta según cuán grande sea el tablero */
+}
+
+/* --- Cada territorio individual --- */
+.territorio {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  color: white;
+  border: 1px solid #999;
+  width: 70px;
+  height: 100px;
+  text-align: center;
+}
+
+/* Partida (game) layout panels */
+.partida-container{ display:flex; gap:16px; padding:12px; align-items:flex-start; }
+.panel-izquierdo{
+  background: #636363; /* dark gray panel background */
+  padding: 16px;
+  border-radius: 12px;
+  min-width: 180px;
+  color: var(--text);
+  box-shadow: 0 6px 18px rgba(0,0,0,0);
+}
+.panel-derecho{
+  background: #636363; padding:16px; border-radius:12px; min-width:160px; color:var(--text);
+  /* keep relative positioning if needed for future absolute children */
+}
+.tablero{ flex:1; display:flex; flex-direction:column; gap:12px; }
+
+/* Wrapper for right column: stack the score panel and external controls (dice) vertically */
+.panel-derecho-wrap{ display:flex; flex-direction:column; gap:8px; align-items:stretch; min-width:160px; }
+
+/* Controls inside the left panel: stack image above label and center */
+.panel-izquierdo .control{
+  display:flex;
+  flex-direction:column;
+  align-items:center;
+  gap:6px;
+  margin-bottom:8px;
+}
+.panel-izquierdo .control span{ font-size:0.95rem; }
+
+/* Botones de acciones con imagen de fondo (texto encima) */
+.accion-btn{
+  width:160px;
+  height:44px;
+  display:inline-flex;
+  align-items:center;
+  justify-content:center;
+  padding:0 12px;
+  border:0;
+  background-image: url('../img/boton_acciones.png');
+  background-position: center;
+  background-repeat: no-repeat;
+  background-size: contain;
+  background-color: transparent;
+  color: #ffffff;
+  font-weight:700;
+  cursor:pointer;
+  text-shadow: none;
+}
+.accion-btn:active{ transform: translateY(1px); }
+
+/* Recursos row under the tablero */
+.recursos{ display:flex; gap:12px; flex-wrap:wrap; margin-top:8px; }
+.recurso{ display:flex; flex-direction:column; align-items:center; gap:6px; }
+.recurso span{ font-size:0.95rem; }
+
+/* Lanzar dado: container and button styles */
+.lanzar-dado-container{
+  position:static;
+  margin-top:18px;
+  display:flex;
+  justify-content:center;
+  align-items:center;
+  align-self:center; 
+  gap:12px; 
+  transform: translateX(-50px);
+}
+/* Hexagonal dice button */
+.btn-lanzar{
+  width:120px;
+  height:120px;
+  padding:0;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  color:#ffffff;
+  font-weight:700;
+  background: linear-gradient(180deg,#ffdd57,#f0b90b);
+  border:0;
+  cursor:pointer;
+  box-shadow: 0 8px 20px rgba(0,0,0,0.28);
+  -webkit-clip-path: polygon(25% 5%, 75% 5%, 100% 50%, 75% 95%, 25% 95%, 0% 50%);
+  clip-path: polygon(25% 5%, 75% 5%, 100% 50%, 75% 95%, 25% 95%, 0% 50%);
+  transition: transform .12s ease, box-shadow .12s ease;
+}
+.btn-lanzar:hover{ transform:translateY(-4px) scale(1.02); box-shadow: 0 12px 28px rgba(0,0,0,0.32); }
+
+/* Rules view block styling: ensure the whole content looks like a single uniform panel */
+.rules-block{
+  background:#f7fafc;
+  color:#0f1724; /* dark text for readability on light bg */
+  padding:24px;
+  border-radius:8px;
+}
+.rules-block section{ margin:0 0 14px 0; background:transparent; }
+.rules-block h2{ margin:0 0 8px 0; font-size:1.15rem; }
+.rules-block p, .rules-block li, .rules-block code{ color:#0b1220; margin:0 0 8px 0; }
+.rules-block ol{ padding-left:20px; }
+.rules-block ul{ padding-left:18px; }
+
+.recurso { display:flex; align-items:center; gap:8px; margin:6px 0; }
+.recurso img { display:block; width:28px; height:28px; object-fit:contain; }
+/* Hero centrado para listados */
+.hero.hero--center{
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  grid-template-columns: initial; /* anula grid de .hero */
+}
+
+/* Panel central de partidas */
+.board{
+  width: clamp(520px, 52vw, 760px);
+  padding: 28px 32px;
+  border-radius: 28px;
+  background: rgba(0,0,0,.55);
+  backdrop-filter: blur(4px);
+  text-align: center;
+}
+.board-title{
+  margin: 8px 0 20px;
+  font-size: 36px;
+  letter-spacing: .5px;
+}
+.board-list{
+  list-style:none; margin:0; padding:8px 0; display:grid; gap:12px;
+}
+.board-row{
+  display:grid;
+  grid-template-columns: 1fr auto auto;
+  align-items:center;
+  gap:18px;
+  padding:10px 14px;
+  border-radius:12px;
+  background: rgba(255,255,255,.04);
+}
+.board-row .name{ justify-self: start; font-weight:600 }
+.board-row .count{ justify-self: center; opacity:.9 }

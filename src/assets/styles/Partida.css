@@ -1,0 +1,52 @@
+/* --- CONTENEDOR GENERAL DE LA PARTIDA --- */
+.partida-container {
+  display: flex;
+  justify-content: center;
+  align-items: flex-start;
+  width: 100%;
+  height: 100vh;
+  background-color: #111; /* opcional */
+  color: white;
+  gap: 20px;
+  padding: 20px;
+  box-sizing: border-box;
+}
+
+/* --- PANEL IZQUIERDO (acciones, etc.) --- */
+.panel-izquierdo {
+  width: 15%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+}
+
+/* --- TABLERO CENTRAL --- */
+.tablero {
+  flex: 1;
+  display: flex;
+  justify-content: center;   
+  align-items: center;     
+  height: 100vh;             /* ocupa toda la ventana */
+  width: 100vw;  
+  flex-direction: column;
+  align-items: center;
+  justify-content: flex-start;
+}
+
+/* --- PANEL DERECHO (puntaje, info, etc.) --- */
+.panel-derecho {
+  width: 15%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+}
+
+/* --- RECURSOS ABAJO DEL TABLERO --- */
+.recursos {
+  display: flex;
+  justify-content: center;
+  gap: 20px;
+  margin-top: 30px;
+}
