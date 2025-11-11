@@ -62,11 +62,16 @@ button{cursor:pointer}
 
 /* Fondo de pantalla del lobby */
 .hero{
-  position:relative;
-  flex:1;
-  min-height:0; /* allow flex to size correctly */
-  display:grid; grid-template-columns:1fr 420px; gap:24px; align-items:center;
-  padding:24px; background:radial-gradient(1200px 600px at 60% 40%, #121318 0%, #0f0f10 60%, #0f0f10 100%);
+  position: relative;
+  flex: 1;
+  min-height: calc(100dvh - 36px - 48px); /* 36px footer + 48px padding (ajusta si cambias padding) */
+  display: grid;
+  grid-template-columns: 1fr 420px;
+  gap: 24px;
+  align-items: center;
+  padding: 24px;
+  background: radial-gradient(1200px 600px at 60% 40%, #121318 0%, #0f0f10 60%, #0f0f10 100%);
+  box-sizing: border-box; /* asegura que padding no aumente la altura calculada */
 }
 .hero::before{
   content:""; position:absolute; inset:0;
