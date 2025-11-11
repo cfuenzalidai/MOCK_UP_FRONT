@@ -1,8 +1,9 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
+import '../assets/styles/perfil.css';
 
-export default function EditProfile(){
+export default function EditProfile() {
   const { user, updateMe } = useAuth();
   const navigate = useNavigate();
   const [nombre, setNombre] = useState(user?.nombre || '');
@@ -10,38 +11,73 @@ export default function EditProfile(){
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
 
-  async function onSubmit(e){
+  if (!user) {
+    return (
+      <section className="hero perfil">
+        <div className="perfil-panel">
+          <h2 className="perfil-title">Editar usuario</h2>
+          <p className="perfil-msg">Debes iniciar sesión para editar tu perfil.</p>
+        </div>
+      </section>
+    );
+  }
+
+  async function onSubmit(e) {
     e.preventDefault();
     setError(null);
     setLoading(true);
-    try{
+    try {
       await updateMe({ nombre, email });
-      navigate('/');
-    }catch(err){
+      navigate('/nosotros'); // o '/' si prefieres
+    } catch (err) {
       setError(err?.response?.data?.error?.message || err.message || 'Error al actualizar');
-    }finally{ setLoading(false); }
+    } finally {
+      setLoading(false);
+    }
   }
 
-  if(!user) return <div style={{ padding:24 }}>Debes iniciar sesión para editar tu perfil.</div>;
-
   return (
-    <div style={{ padding:24, maxWidth:600 }}>
-      <h2>Editar usuario</h2>
-      <form onSubmit={onSubmit}>
-        <div style={{ marginBottom:12 }}>
-          <label htmlFor="nombre">Nombre</label><br />
-          <input id="nombre" value={nombre} onChange={e=>setNombre(e.target.value)} required />
-        </div>
-        <div style={{ marginBottom:12 }}>
-          <label htmlFor="email">Email</label><br />
-          <input id="email" type="email" value={email} onChange={e=>setEmail(e.target.value)} required />
-        </div>
+    <section className="hero perfil">
+      <div className="perfil-panel">
+        <h2 className="perfil-title">Editar usuario</h2>
 
-        {error && <div style={{ color:'red', marginBottom:12 }}>{error}</div>}
+        <form className="perfil-form" onSubmit={onSubmit}>
+          <div className="field">
+            <label htmlFor="nombre">Nombre</label>
+            <input
+              id="nombre"
+              value={nombre}
+              onChange={(e) => setNombre(e.target.value)}
+              required
+              autoComplete="name"
+            />
+          </div>
 
-        <button type="submit" disabled={loading}>{loading ? 'Guardando...' : 'Guardar cambios'}</button>
-      </form>
-    </div>
+          <div className="field">
+            <label htmlFor="email">Email</label>
+            <input
+              id="email"
+              type="email"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              required
+              autoComplete="email"
+            />
+          </div>
+
+          {error && <div className="error">{error}</div>}
+
+          <div className="actions">
+            <button type="button" className="btn ghost" onClick={() => navigate(-1)}>
+              Cancelar
+            </button>
+            <button type="submit" className="btn primary" disabled={loading}>
+              {loading ? 'Guardando…' : 'Guardar cambios'}
+            </button>
+          </div>
+        </form>
+      </div>
+    </section>
   );
 }
 

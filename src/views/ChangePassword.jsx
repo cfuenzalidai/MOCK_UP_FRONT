@@ -2,8 +2,9 @@ import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import * as authService from '../services/auth';
+import '../assets/styles/perfil.css';
 
-export default function ChangePassword(){
+export default function ChangePassword() {
   const { user, logout } = useAuth();
   const navigate = useNavigate();
   const [currentPassword, setCurrentPassword] = useState('');
@@ -13,56 +14,99 @@ export default function ChangePassword(){
   const [error, setError] = useState(null);
   const [success, setSuccess] = useState(null);
 
-  async function onSubmit(e){
+  if (!user) {
+    return (
+      <section className="hero perfil">
+        <div className="perfil-panel">
+          <h2 className="perfil-title">Cambiar contraseña</h2>
+          <p className="perfil-msg">Debes iniciar sesión para cambiar tu contraseña.</p>
+        </div>
+      </section>
+    );
+  }
+
+  async function onSubmit(e) {
     e.preventDefault();
     setError(null);
     setSuccess(null);
-    if(newPassword !== confirm){ setError('La nueva contraseña y la confirmación no coinciden'); return; }
+    if (newPassword !== confirm) {
+      setError('La nueva contraseña y la confirmación no coinciden');
+      return;
+    }
     setLoading(true);
-    try{
-      // Llamamos a un endpoint backend que debe existir: POST /usuarios/:id/password
-      await authService.changePassword({ currentPassword, newPassword, userId: user.id });
+    try {
+      await authService.changePassword({
+        currentPassword,
+        newPassword,
+        userId: user.id,
+      });
       setSuccess('Contraseña cambiada correctamente. Inicia sesión de nuevo.');
-      // Forzar logout para obligar a re-login
-      setTimeout(()=>{
+      setTimeout(() => {
         logout();
         navigate('/login');
       }, 1200);
-    }catch(err){
+    } catch (err) {
       setError(err?.response?.data?.error?.message || err.message || 'Error al cambiar contraseña');
-    }finally{ setLoading(false); }
+    } finally {
+      setLoading(false);
+    }
   }
 
-  if(!user) return <div style={{ padding:24 }}>Debes iniciar sesión para cambiar la contraseña.</div>;
-
   return (
-    <div style={{ padding:24, maxWidth:600 }}>
-      <h2>Cambiar contraseña</h2>
-      <form onSubmit={onSubmit}>
-        <div style={{ marginBottom:12 }}>
-          <label htmlFor="current">Contraseña actual</label><br />
-          <input id="current" type="password" value={currentPassword} onChange={e=>setCurrentPassword(e.target.value)} required />
-        </div>
+    <section className="hero perfil">
+      <div className="perfil-panel">
+        <h2 className="perfil-title">Cambiar contraseña</h2>
 
-        <div style={{ marginBottom:12 }}>
-          <label htmlFor="new">Nueva contraseña</label><br />
-          <input id="new" type="password" value={newPassword} onChange={e=>setNewPassword(e.target.value)} required />
-        </div>
+        <form className="perfil-form" onSubmit={onSubmit}>
+          <div className="field">
+            <label htmlFor="current">Contraseña actual</label>
+            <input
+              id="current"
+              type="password"
+              value={currentPassword}
+              onChange={(e) => setCurrentPassword(e.target.value)}
+              required
+              autoComplete="current-password"
+            />
+          </div>
 
-        <div style={{ marginBottom:12 }}>
-          <label htmlFor="confirm">Confirmar nueva contraseña</label><br />
-          <input id="confirm" type="password" value={confirm} onChange={e=>setConfirm(e.target.value)} required />
-        </div>
+          <div className="field">
+            <label htmlFor="new">Nueva contraseña</label>
+            <input
+              id="new"
+              type="password"
+              value={newPassword}
+              onChange={(e) => setNewPassword(e.target.value)}
+              required
+              autoComplete="new-password"
+            />
+          </div>
 
-        {error && <div style={{ color:'red', marginBottom:12 }}>{error}</div>}
-        {success && <div style={{ color:'green', marginBottom:12 }}>{success}</div>}
+          <div className="field">
+            <label htmlFor="confirm">Confirmar nueva contraseña</label>
+            <input
+              id="confirm"
+              type="password"
+              value={confirm}
+              onChange={(e) => setConfirm(e.target.value)}
+              required
+              autoComplete="new-password"
+            />
+          </div>
 
-        <button type="submit" disabled={loading}>{loading ? 'Cambiando...' : 'Cambiar contraseña'}</button>
-      </form>
-    </div>
+          {error && <div className="error">{error}</div>}
+          {success && <div className="success">{success}</div>}
+
+          <div className="actions">
+            <button type="button" className="btn ghost" onClick={() => navigate(-1)}>
+              Cancelar
+            </button>
+            <button type="submit" className="btn primary" disabled={loading}>
+              {loading ? 'Cambiando…' : 'Cambiar contraseña'}
+            </button>
+          </div>
+        </form>
+      </div>
+    </section>
   );
 }
-
-// AVISO: este componente asume que el backend ofrece una ruta para cambiar contraseña
-// ejemplo: POST /usuarios/:id/password que valide currentPassword y guarde hashed password.
-// Si el backend no tiene este endpoint, hay que implementarlo en `Frontenders_back_252s2`.

@@ -4,6 +4,7 @@ import NavBar from './components/NavBar';
 import Footer from './components/Footer';
 import Home from './views/Home';
 import Instrucciones from './views/Instrucciones';
+import Nosotros from './views/Nosotros';
 import Login from './views/Login';
 import Registro from './views/Registro';
 import CreatePartida from './views/CreatePartida';
@@ -12,6 +13,7 @@ import EditProfile from './views/EditProfile';
 import ChangePassword from './views/ChangePassword';
 import Reglas from './views/Reglas';
 import ProtectedRoute from './routes/ProtectedRoute';
+import PartidasPublicas from './views/PartidasPublicas';
 
 function Placeholder({ title }) { return <div style={{ padding:24 }}><h2>{title}</h2></div>; }
 
@@ -30,6 +32,8 @@ function AppContent(){
               <Route path="/como-jugar" element={<Instrucciones />} />
               <Route path="/reglas" element={<Reglas />} />
               <Route path="/partidas" element={<Partida />} />
+              <Route path="/nosotros" element={<Nosotros />} />
+//               <Route path="/partidas" element={<PartidasPublicas/>} />
               <Route path="/login" element={<Login />} />
               <Route path="/registro" element={<Registro />} />
               <Route path="/partidas/nueva" element={<ProtectedRoute><CreatePartida /></ProtectedRoute>} />
