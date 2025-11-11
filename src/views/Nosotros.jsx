@@ -2,7 +2,7 @@ import '../assets/styles/nosotros.css';
 
 const TEAM = [
   { name: 'Cristóbal Briones', img: '/team/Cristóbal Briones.jpg', role: 'Estética' },
-  { name: 'Benjamin Grassi', img: '/team/Benjamín Grassi.jpg', role: '"La mamá de Bakugo es Gaudi"' },
+  { name: 'Benjamin Grassi', img: '/team/Benjamín Grassi.jpg', role: 'Concepto y Endpoints' },
   { name: 'Cristóbal Fuenzalida', img: '/team/Cristóbal Fuenzalida.jpg', role: 'Registro y Deploy' },
 ];
 
