@@ -3,6 +3,7 @@ import { AuthProvider } from './context/AuthContext';
 import NavBar from './components/NavBar';
 import Footer from './components/Footer';
 import Home from './views/Home';
+import Nosotros from './views/Nosotros';
 import Login from './views/Login';
 import Registro from './views/Registro';
 import CreatePartida from './views/CreatePartida';
@@ -22,6 +23,7 @@ export default function App(){
           <div className="main">
             <Routes>
               <Route path="/" element={<Home />} />
+              <Route path="/nosotros" element={<Nosotros />} />
               <Route path="/como-jugar" element={<Placeholder title="Cómo Jugar" />} />
               <Route path="/reglas" element={<Placeholder title="Reglas" />} />
               <Route path="/partidas" element={<PartidasPublicas/>} />
