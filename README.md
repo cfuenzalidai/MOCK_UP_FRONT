@@ -21,6 +21,9 @@ yarn dev
 - `VITE_API_URL` → URL del backend (sin slash final)
 - `VITE_WS_URL` → URL de WebSocket (opcional por ahora)
 
+## Archivo .env
+- VITE_API_URL=http://localhost:3000/
+
 ## Errores de autenticación (login / registro)
 
 Validación cliente:
