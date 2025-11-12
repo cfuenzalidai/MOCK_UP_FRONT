@@ -14,6 +14,9 @@ import ChangePassword from './views/ChangePassword';
 import Reglas from './views/Reglas';
 import ProtectedRoute from './routes/ProtectedRoute';
 import PartidasPublicas from './views/PartidasPublicas';
+import AdminRoute from './routes/AdminRoute';
+import AdminUsuarios from './views/AdminUsuarios';
+import AdminPartidas from './views/AdminPartidas';
 
 function Placeholder({ title }) { return <div style={{ padding:24 }}><h2>{title}</h2></div>; }
 
@@ -40,6 +43,8 @@ function AppContent(){
               <Route path="/partidas/nueva" element={<ProtectedRoute><CreatePartida /></ProtectedRoute>} />
               <Route path="/usuario/editar" element={<ProtectedRoute><EditProfile /></ProtectedRoute>} />
               <Route path="/usuario/clave" element={<ProtectedRoute><ChangePassword /></ProtectedRoute>} />
+              <Route path="/admin/usuarios" element={<AdminRoute><AdminUsuarios/></AdminRoute>} />
+              <Route path="/admin/partidas" element={<AdminRoute><AdminPartidas/></AdminRoute>} />
               <Route path="/config" element={<Placeholder title="Configuración" />} />
             </Routes>
           </div>

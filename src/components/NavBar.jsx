@@ -60,6 +60,13 @@ export default function NavBar(){
                   <Link to="/usuario/editar" role="menuitem">Editar Usuario</Link>
                   <Link to="/usuario/clave" role="menuitem">Cambiar contraseña</Link>
                   <Link to="/config" role="menuitem">Configuración</Link>
+                  {/* Admin links */}
+                  {(user?.rol === 'admin' || user?.role === 'admin') && (
+                    <>
+                      <Link to="/admin/usuarios" role="menuitem">Usuarios</Link>
+                      <Link to="/admin/partidas" role="menuitem">Partidas</Link>
+                    </>
+                  )}
                   <button onClick={onLogout} role="menuitem" className="danger">Finalizar sesión</button>
                 </div>
               )}
