@@ -1,0 +1,82 @@
+/* Reglas page overrides: smaller typography, fixed background and footer visibility */
+
+/* Reduce global sizes for the rules content inside .nos-board */
+.nos-board .nos-desc {
+  font-size: 25px; /* base paragraph */
+  line-height: 1.5;
+  color: var(--muted);
+}
+
+.nos-board .nos-desc h2 {
+  font-size: 20px;
+  margin-top: 12px;
+  margin-bottom: 8px;
+}
+
+.nos-board .nos-desc p,
+.nos-board .nos-desc li,
+.nos-board .nos-desc ol,
+.nos-board .nos-desc ul {
+  font-size: 14px;
+  line-height: 1.45;
+  color: var(--muted);
+}
+
+/* Make long lists more compact but still readable */
+.nos-board .nos-desc ol li { margin-bottom: 8px; }
+
+/* Ensure headings inside the rules keep contrast but are not huge */
+.nos-board .nos-title { font-size: 48px; }
+
+/* Make the page background static while scrolling */
+.hero::before {
+  background-attachment: fixed !important;
+  background-position: center top !important;
+}
+
+/* Ensure footer is visible above background layers */
+.footer {
+  position: relative;
+  z-index: 60;
+}
+
+/* If the panel becomes taller than the viewport, allow internal scrolling of description
+   so the footer stays visible and the background remains fixed. */
+.nos-board {
+  /* cap max-height to viewport minus header/footer roughly */
+  max-height: calc(100vh - 140px);
+}
+
+.nos-board .nos-desc {
+  overflow: auto;
+  max-height: calc(100vh - 300px);
+  padding-right: 12px; /* space for scrollbar */
+}
+
+/* Responsive: reduce font further on small screens */
+@media (max-width: 900px) {
+  .nos-board .nos-desc { font-size: 14px; }
+  .nos-board .nos-desc p, .nos-board .nos-desc li { font-size: 13px; }
+  .nos-board { max-height: none; }
+}
+
+/* scroll oscuro para el panel de reglas */
+.nos-board .nos-desc::-webkit-scrollbar { width: 10px; height: 10px; }
+.nos-board .nos-desc::-webkit-scrollbar-track {
+background: rgba(0,0,0,0.18);
+border-radius: 10px;
+}
+.nos-board .nos-desc::-webkit-scrollbar-thumb {
+background: rgba(20,20,20,0.72);
+border-radius: 10px;
+border: 2px solid rgba(0,0,0,0.12); /* separador suave */
+}
+.nos-board .nos-desc::-webkit-scrollbar-thumb:hover {
+background: rgba(20,20,20,0.86);
+}
+
+/* Firefox */
+.nos-board .nos-desc {
+scrollbar-width: thin;
+scrollbar-color: rgba(20,20,20,0.72) rgba(0,0,0,0.18);
+}

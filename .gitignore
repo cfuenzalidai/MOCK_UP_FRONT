@@ -1,0 +1,28 @@
+#!.yarn/cache
+.pnp.*
+
+# dependencias y artefactos
+node_modules/
+dist/
+.vite/
+coverage/
+
+# yarn (nodeLinker node-modules y PnP)
+.yarn/*
+!.yarn/releases
+!.yarn/plugins
+!.yarn/sdks
+!.yarn/versions
+!.yarn/patches
+.pnp.*
+.yarn/install-state.gz
+
+# entornos locales
+.env
+.env.local
+.env.*.local
+
+# editor
+.vscode/
+.idea/
+.DS_Store
