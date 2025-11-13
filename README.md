@@ -1,5 +1,20 @@
 # Frontenders — Entrega 3
 
+URL Netlify: 
+
+## Credenciales
+- **Admin**
+    - *email*: magdadmin@demo.cl
+    - *hash password* → soyadmin123
+
+- **Owner**: 
+    - *email*: owner@demo.cl
+    - *hash password* → 123456
+
+- **Jugador**
+    - *email*: a@demo.cl ó b@demo.cl
+    - *hash password* → 123456 (de ambos)
+
 ## Requisitos
 - Node ≥ 20.19 o ≥ 22.12
 - Yarn 4 (nodeLinker `node-modules` recomendado)
