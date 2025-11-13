@@ -1,5 +1,20 @@
 # Frontenders — Entrega 3
 
+URL Netlify: 
+
+## Credenciales
+- **Admin**
+    - *email*: magdadmin@demo.cl
+    - *hash password* → soyadmin123
+
+- **Owner**: 
+    - *email*: owner@demo.cl
+    - *hash password* → 123456
+
+- **Jugador**
+    - *email*: a@demo.cl ó b@demo.cl
+    - *hash password* → 123456 (de ambos)
+
 ## Requisitos
 - Node ≥ 20.19 o ≥ 22.12
 - Yarn 4 (nodeLinker `node-modules` recomendado)
@@ -20,6 +35,9 @@ yarn dev
 ## Variables de entorno
 - `VITE_API_URL` → URL del backend (sin slash final)
 - `VITE_WS_URL` → URL de WebSocket (opcional por ahora)
+
+## Archivo .env
+- VITE_API_URL=http://localhost:3000/
 
 ## Errores de autenticación (login / registro)
 
