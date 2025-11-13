@@ -1,3 +1,3 @@
-const API_URL = VITE_API_URL
+const API_URL = "https://apogeo.onrender.com/";
 
 export default API_URL;
