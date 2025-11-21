@@ -44,9 +44,9 @@ export default function NavBar(){
             <img className="avatar" src={DefaultAvatar} alt="Perfil" />
           </>
         ) : (
-          // Agrupamos saludo + avatar en un contenedor flex para mantener orden
+          // Agrupamos saludo + avatar en un contenedor flex para mantener orden 
           <div className="user-actions">
-            <div className="welcome">
+            <div className="welcome mr-12">
               <span>{`¡Bienvenido ${user.nombre}!`}</span>
             </div>
 
