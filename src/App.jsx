@@ -22,7 +22,7 @@ function Placeholder({ title }) { return <div className="view-root"><h2>{title}<
 
 function AppContent(){
   const location = useLocation();
-  const hideFooterOn = ['/reglas'];
+  const hideFooterOn = [];
   const showFooter = !hideFooterOn.includes(location.pathname);
 
   return (
