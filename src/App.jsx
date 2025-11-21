@@ -18,7 +18,7 @@ import AdminRoute from './routes/AdminRoute';
 import AdminUsuarios from './views/AdminUsuarios';
 import AdminPartidas from './views/AdminPartidas';
 
-function Placeholder({ title }) { return <div style={{ padding:24 }}><h2>{title}</h2></div>; }
+function Placeholder({ title }) { return <div className="view-root"><h2>{title}</h2></div>; }
 
 function AppContent(){
   const location = useLocation();

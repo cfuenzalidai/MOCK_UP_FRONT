@@ -209,3 +209,23 @@ button{cursor:pointer}
 .pill.success:hover{ filter:brightness(1.1); }
 .pill.danger{ color:#f3b5b5; border-color:#6b4b4b; background:rgba(97, 46, 46, .25); }
 .pill:disabled{ opacity:.8; cursor:not-allowed }
+
+/* Utilidad para vistas/feedback simples */
+.view-root{ padding: 24px; }
+
+/* Utility spacing */
+.ml-8{ margin-left: 8px !important; }
+.mr-12{ margin-right: 12px !important; }
+
+/* Small helpers */
+.text-danger{ color: #f3b5b5; }
+.user-actions{ display:flex; align-items:center; }
+
+/* Instrucciones view */
+.instrucciones-root{ padding: 20px; max-width: 900px; margin: 0 auto; }
+.code-block{ background: #f5f5f5; padding: 12px; border-radius: 6px; }
+.mt-18{ margin-top: 18px; }
+
+/* SVG clickable territory */
+.territorio.clickable{ cursor: pointer; }
+.territorio{ cursor: default; }

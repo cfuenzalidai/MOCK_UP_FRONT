@@ -45,8 +45,8 @@ export default function NavBar(){
           </>
         ) : (
           // Agrupamos saludo + avatar en un contenedor flex para mantener orden
-          <div style={{ display: 'flex', alignItems: 'center' }}>
-            <div className="welcome" style={{ marginRight: 12 }}>
+          <div className="user-actions">
+            <div className="welcome">
               <span>{`¡Bienvenido ${user.nombre}!`}</span>
             </div>
 

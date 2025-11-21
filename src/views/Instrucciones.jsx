@@ -2,7 +2,7 @@ import React from "react";
 
 export default function Instrucciones() {
 	return (
-		<main style={{ padding: 20, maxWidth: 900, margin: "0 auto" }}>
+		<main className="instrucciones-root">
 			<h1>Instrucciones</h1>
 
 			<section>
@@ -15,7 +15,7 @@ export default function Instrucciones() {
 
 			<section>
 				<h2>Setup rápido</h2>
-				<pre style={{ background: "#f5f5f5", padding: 12, borderRadius: 6 }}>
+				<pre className="code-block">
 {`yarn
 cp .env.example .env.local
 # Edita .env.local si es necesario
@@ -40,7 +40,7 @@ yarn dev`}
 				</ul>
 			</section>
 
-			<p style={{ marginTop: 18 }}>
+			<p className="mt-18">
 				Si quieres que esta vista aparezca en la navegación, importa este componente y añade una ruta
 				en `App.jsx` o un enlace en `src/components/NavBar.jsx`.
 			</p>

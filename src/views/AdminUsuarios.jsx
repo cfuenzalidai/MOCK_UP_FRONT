@@ -67,7 +67,7 @@ export default function AdminUsuarios(){
                   </div>
                   <div>
                     <button className="secondary" onClick={()=>{ /* editar no implementado */ }}>Editar</button>
-                    <button style={{ marginLeft:8 }} className="danger" onClick={()=>openConfirm(u)}>Eliminar</button>
+                    <button className="danger ml-8" onClick={()=>openConfirm(u)}>Eliminar</button>
                   </div>
                 </li>
               ))}
@@ -81,7 +81,7 @@ export default function AdminUsuarios(){
               <h3>Confirmar eliminación</h3>
               <p>Ingresa tu contraseña de administrador para confirmar la eliminación de <strong>{target?.email}</strong>.</p>
               <input type="password" value={adminPassword} onChange={e=>setAdminPassword(e.target.value)} placeholder="Contraseña de administrador" />
-              {error && <p style={{ color:'red' }}>{error}</p>}
+              {error && <p className="text-danger">{error}</p>}
               <div className="modal-actions">
                 <button onClick={confirmDelete} className="danger">Confirmar eliminación</button>
                 <button onClick={closeModal} className="secondary">Cancelar</button>

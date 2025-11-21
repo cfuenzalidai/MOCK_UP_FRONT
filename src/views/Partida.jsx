@@ -94,12 +94,11 @@ export default function Partida() {
             <span>Naves A: 1</span>
         </div>
   <h3>Acciones</h3>
-  {/* Use inline style for backgroundImage so Vite resolves the imported asset reliably */}
-  <button className="accion-btn" style={{ backgroundImage: `url(${boton_acciones})` }}>Construir Nave</button>
-  <button className="accion-btn" style={{ backgroundImage: `url(${boton_acciones})` }}>Mejorar Nave</button>
-  <button className="accion-btn" style={{ backgroundImage: `url(${boton_acciones})` }}>Usar Nave</button>
-  <button className="accion-btn" style={{ backgroundImage: `url(${boton_acciones})` }}>Construir Base</button>
-  <button className="accion-btn" style={{ backgroundImage: `url(${boton_acciones})` }}>Origen</button>
+  <button className="accion-btn">Construir Nave</button>
+  <button className="accion-btn">Mejorar Nave</button>
+  <button className="accion-btn">Usar Nave</button>
+  <button className="accion-btn">Construir Base</button>
+  <button className="accion-btn">Origen</button>
       </div>
 
       {/* Tablero central */}
