@@ -26,7 +26,7 @@ export default function CreatePartida(){
     return () => (mounted = false);
   }, [createPartida, nav]);
 
-  if (loading) return <div style={{ padding:24 }}>Creando partida...</div>;
-  if (error) return <div style={{ padding:24 }} className="error">{error}</div>;
+  if (loading) return <div className="view-root">Creando partida...</div>;
+  if (error) return <div className="view-root error">{error}</div>;
   return null;
 }

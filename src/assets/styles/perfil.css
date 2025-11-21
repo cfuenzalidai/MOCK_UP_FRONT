@@ -60,6 +60,12 @@
 }
 
 .btn{
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  /* asegurar que botones y enlaces compartan exactamente la misma fuente/tamaño/line-height */
+  font: inherit;
+  line-height: 1.2;
   height: 42px; padding: 0 16px; border-radius: 12px; font-weight: 700;
   border: 1px solid #3f4248; background: #232428; color: #eaeaf0;
 }

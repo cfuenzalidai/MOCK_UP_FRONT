@@ -16,7 +16,7 @@ export default function Territorio({ id, points, fill = 'transparent', label, on
   const pillRx = 8; // pill corner radius
 
   return (
-    <g className="territorio" data-id={id} onClick={() => onClick && onClick(id)} style={{ cursor: onClick ? 'pointer' : 'default' }}>
+    <g className={"territorio" + (onClick ? ' clickable' : '')} data-id={id} onClick={() => onClick && onClick(id)}>
       {/* polygon with no stroke; borders are drawn globally to avoid double-stroke gaps */}
       <polygon points={points} fill={displayFill} stroke="none" fillOpacity={1} />
 
@@ -46,7 +46,7 @@ export default function Territorio({ id, points, fill = 'transparent', label, on
             fontSize={fontSize}
             fill="#071330" /* letras negras */
             fontWeight={700}
-            style={{ pointerEvents: 'none' }} /* allow clicks to hit the parent g/polygon */
+            pointerEvents="none" /* allow clicks to hit the parent g/polygon */
           >
             {label}
           </text>
