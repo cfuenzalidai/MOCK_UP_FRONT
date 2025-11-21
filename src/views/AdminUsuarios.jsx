@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import api from '../services/api';
 import { useAuth } from '../context/AuthContext';
+import '../assets/styles/partidas-publicas.css';
 
 export default function AdminUsuarios(){
   const { user, login } = useAuth();
@@ -51,62 +52,44 @@ export default function AdminUsuarios(){
   }
 
   return (
-    <div style={{ padding:24 }}>
-      <h2>Administración - Usuarios</h2>
-      {loading ? <p>Cargando...</p> : (
-        <div style={{ maxWidth:900 }}>
-          <table style={{ width:'100%', borderCollapse:'collapse' }}>
-            <thead>
-              <tr>
-                <th style={{ textAlign:'left', padding:8 }}>ID</th>
-                <th style={{ textAlign:'left', padding:8 }}>Nombre</th>
-                <th style={{ textAlign:'left', padding:8 }}>Email</th>
-                <th style={{ textAlign:'left', padding:8 }}>Rol</th>
-                <th style={{ textAlign:'right', padding:8 }}></th>
-              </tr>
-            </thead>
-            <tbody>
-              {users.map(u=> (
-                <tr key={u.id} style={{ borderTop:'1px solid #eee' }}>
-                  <td style={{ padding:8 }}>{u.id}</td>
-                  <td style={{ padding:8 }}>{u.nombre}</td>
-                  <td style={{ padding:8 }}>{u.email}</td>
-                  <td style={{ padding:8 }}>{u.rol || u.role}</td>
-                  <td style={{ padding:8, textAlign:'right' }}>
-                    <button style={{ marginRight:8 }} onClick={()=>{ /* editar no implementado */ }}>Editar</button>
-                    <button className="danger" onClick={()=>openConfirm(u)}>Eliminar</button>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-      )}
+    <section className="partidas hero">
+      <div className="pp-board panel">
+        <h2 className="pp-title">Administración - Usuarios</h2>
 
-      {showModal && (
-        <div className="modalOverlay">
-          <div className="modal">
-            <h3>Confirmar eliminación</h3>
-            <p>Ingresa tu contraseña de administrador para confirmar la eliminación de <strong>{target?.email}</strong>.</p>
-            <input type="password" value={adminPassword} onChange={e=>setAdminPassword(e.target.value)} placeholder="Contraseña de administrador" />
-            {error && <p style={{ color:'red' }}>{error}</p>}
-            <div style={{ marginTop:12 }}>
-              <button onClick={confirmDelete} className="danger">Confirmar eliminación</button>
-              <button onClick={closeModal} style={{ marginLeft:8 }}>Cancelar</button>
+        {loading ? <p>Cargando...</p> : (
+          <div className="admin-wrapper">
+            <ul className="admin-list">
+              {users.map(u => (
+                <li key={u.id} className="admin-row">
+                  <div className="admin-left">
+                    <div className="name">{u.nombre || u.name || '—'}</div>
+                    <div className="admin-meta">ID: {u.id} • {u.email} • Rol: {u.rol || u.role || '—'}</div>
+                  </div>
+                  <div>
+                    <button className="secondary" onClick={()=>{ /* editar no implementado */ }}>Editar</button>
+                    <button style={{ marginLeft:8 }} className="danger" onClick={()=>openConfirm(u)}>Eliminar</button>
+                  </div>
+                </li>
+              ))}
+            </ul>
+          </div>
+        )}
+
+        {showModal && (
+          <div className="modalOverlay">
+            <div className="modal">
+              <h3>Confirmar eliminación</h3>
+              <p>Ingresa tu contraseña de administrador para confirmar la eliminación de <strong>{target?.email}</strong>.</p>
+              <input type="password" value={adminPassword} onChange={e=>setAdminPassword(e.target.value)} placeholder="Contraseña de administrador" />
+              {error && <p style={{ color:'red' }}>{error}</p>}
+              <div className="modal-actions">
+                <button onClick={confirmDelete} className="danger">Confirmar eliminación</button>
+                <button onClick={closeModal} className="secondary">Cancelar</button>
+              </div>
             </div>
           </div>
-        </div>
-      )}
-
-      <style>{`
-        .modalOverlay{ position:fixed; inset:0; background:rgba(0,0,0,0.4); display:flex; align-items:center; justify-content:center; }
-        .modal{ background:#fff; color:#111; padding:20px; border-radius:6px; width:420px; max-width:90%; box-shadow: 0 6px 24px rgba(0,0,0,0.4); }
-        .modal h3{ margin-top:0; color:#111; }
-        .modal p{ color:#333; }
-        button.danger{ background:#d9534f; color:#fff; border:none; padding:8px 12px; border-radius:4px; }
-        input{ width:100%; padding:8px; margin-top:8px; background:#fff; color:#111; border:1px solid #ccc; border-radius:4px }
-        input::placeholder{ color:#888; }
-      `}</style>
-    </div>
+        )}
+      </div>
+    </section>
   );
 }
