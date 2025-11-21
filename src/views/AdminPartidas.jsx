@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import api from '../services/api';
 import { useAuth } from '../context/AuthContext';
-import '../assets/styles/partidas-publicas.css';
+import '../assets/styles/admin.css';
 
 export default function AdminPartidas(){
   const { user, login } = useAuth();
