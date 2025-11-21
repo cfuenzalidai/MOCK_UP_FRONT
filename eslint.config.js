@@ -44,6 +44,16 @@ export default [
 
       // Vite Fast Refresh
       'react-refresh/only-export-components': ['warn', { allowConstantExport: true }],
+
+      'max-len': ['error', {
+        code: 150,
+        tabWidth: 2,
+        ignoreUrls: true,
+        ignoreStrings: true,
+        ignoreTemplateLiterals: true,
+        ignoreComments: false
+      }],
+
     },
   },
   // Silenciar Fast Refresh en archivos no-componentes concretos si molestan
