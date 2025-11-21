@@ -18,7 +18,7 @@ export default function AdminPartidas(){
       try{
         const res = await api.get('/partidas');
         if(mounted) setItems(res.data || []);
-      }catch(e){ console.error(e); }
+      }catch(error){ console.error(error); }
       finally{ if(mounted) setLoading(false); }
     }
     load();
@@ -33,13 +33,17 @@ export default function AdminPartidas(){
     setError(null);
     try{
       await login({ email: user.email, password: adminPassword });
-    }catch(e){ setError('Credenciales de administrador incorrectas'); return; }
+    }catch(error){
+      console.error(error);
+      setError('Credenciales de administrador incorrectas');
+      return;
+    }
 
     try{
       await api.delete(`/partidas/${target.id}`);
       setItems(prev => prev.filter(p => p.id !== target.id));
       closeModal();
-    }catch(e){ console.error(e); setError(e?.response?.data?.error?.message || 'Error eliminando partida'); }
+    }catch(error){ console.error(error); setError(error?.response?.data?.error?.message || 'Error eliminando partida'); }
   }
 
   return (
@@ -54,7 +58,11 @@ export default function AdminPartidas(){
                 <li key={p.id} className="admin-row">
                   <div className="admin-left">
                     <div className="name">{p.nombre || p.name || '—'}</div>
-                    <div className="admin-meta">ID: {p.id} • Owner: {p.ownerId || (p.owner && p.owner.email) || '—'} • Estado: {p.estado || p.status || '—'}</div>
+                    <div className="admin-meta">
+                      <span>ID: {p.id}</span>
+                      <span> • Owner: {p.ownerId || (p.owner && p.owner.email) || '—'}</span>
+                      <span> • Estado: {p.estado || p.status || '—'}</span>
+                    </div>
                   </div>
                   <div>
                     <button className="secondary" onClick={()=>{ /* editar no implementado */ }}>Editar</button>
@@ -66,16 +74,28 @@ export default function AdminPartidas(){
           </div>
         )}
 
-        {showModal && (
+         {showModal && (
           <div className="modalOverlay">
             <div className="modal">
               <h3>Confirmar eliminación</h3>
-              <p>Ingresa tu contraseña de administrador para confirmar la eliminación de la partida <strong>{target?.nombre || target?.id}</strong>.</p>
-              <input type="password" value={adminPassword} onChange={e=>setAdminPassword(e.target.value)} placeholder="Contraseña de administrador" />
+              <p>
+                Ingresa tu contraseña de administrador para confirmar la
+                eliminación de la partida <strong>{target?.nombre || target?.id}</strong>.
+              </p>
+              <input
+                type="password"
+                value={adminPassword}
+                onChange={e => setAdminPassword(e.target.value)}
+                placeholder="Contraseña de administrador"
+              />
               {error && <p className="text-danger">{error}</p>}
               <div className="modal-actions">
-                <button onClick={confirmDelete} className="danger">Confirmar eliminación</button>
-                <button onClick={closeModal} className="secondary">Cancelar</button>
+                <button onClick={confirmDelete} className="danger">
+                  Confirmar eliminación
+                </button>
+                <button onClick={closeModal} className="secondary">
+                  Cancelar
+                </button>
               </div>
             </div>
           </div>

@@ -15,7 +15,7 @@ function StatusPill({ full, onClick }) {
 
 export default function PartidasPublicas() {
   const [rows, setRows] = useState([]);
-  const [joining, setJoining] = useState(null);
+  const [_joining, setJoining] = useState(null);
   const { user } = useAuth();
 
   useEffect(() => {
@@ -26,8 +26,8 @@ export default function PartidasPublicas() {
         const res = await api.get('/partidas');
         const data = res?.data;
         if (mounted) setRows(Array.isArray(data) ? data : []);
-      } catch (e) {
-        console.error('Error fetching partidas', e);
+      } catch (error) {
+        console.error('Error fetching partidas', error);
         if (mounted) setRows([]);
       }
     }

@@ -1,4 +1,3 @@
-import React from 'react';
 
 export default function Territorio({ id, points, fill = 'transparent', label, onClick, ownerColor, hasBase, cx, cy, resourceColor }){
   // points: string "x1,y1 x2,y2 x3,y3"

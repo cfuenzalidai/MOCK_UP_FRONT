@@ -6,7 +6,7 @@ function parseJwt(token) {
 		if (parts.length !== 3) return null;
 		const payload = JSON.parse(atob(parts[1].replace(/-/g, '+').replace(/_/g, '/')));
 		return payload;
-	} catch (e) { return null; }
+	} catch (error) { void error; return null; }
 }
 
 export async function login({ email, password }) {
