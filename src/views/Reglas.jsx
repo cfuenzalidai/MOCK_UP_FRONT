@@ -1,4 +1,3 @@
-import React from "react";
 import '../assets/styles/nosotros.css';
 import '../assets/styles/reglas.css';
 

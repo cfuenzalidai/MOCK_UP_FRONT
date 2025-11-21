@@ -1,10 +1,10 @@
-import React, { useState } from 'react';
+import { useState } from 'react';
 import Territorio from '../components/Territorio';
 import "../assets/styles/Mapa.css";
 
 export default function Mapa() {
   const cell = 80; 
-  const [territorios, setTerritorios] = useState(() => {
+  const [territorios, _setTerritorios] = useState(() => {
     const arr = [];
     let id = 1;
 
@@ -215,10 +215,6 @@ export default function Mapa() {
   );
 }
 
-function getRandomOwnerColor() {
-  const colors = ['#f97316', '#60a5fa', '#34d399', '#f472b6', '#a78bfa', '#facc15'];
-  return colors[Math.floor(Math.random() * colors.length)];
-}
 
 function edgeKey(a, b) {
   const sa = `${a[0]},${a[1]}`;

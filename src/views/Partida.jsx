@@ -1,5 +1,5 @@
 import Mapa from "./Mapa";
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 import { useParams } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import "../assets/styles/Partida.css";
@@ -10,7 +10,6 @@ import img_liebre from "../assets/img/liebre.png";
 import nave_b from "../assets/img/nave_b.png";
 import nave_i from "../assets/img/nave_i.png";
 import nave_a from "../assets/img/nave_a.png";
-import boton_acciones from "../assets/img/boton_acciones.png";
 import api from '../services/api';
 
 export default function Partida() {

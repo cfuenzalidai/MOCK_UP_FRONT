@@ -14,7 +14,7 @@ api.interceptors.request.use((cfg) => {
 	try {
 		const token = localStorage.getItem('token');
 		if (token) cfg.headers = { ...(cfg.headers || {}), Authorization: `Bearer ${token}` };
-	} catch (e) {}
+	} catch (error) { void error; }
 	return cfg;
 });
 
@@ -30,7 +30,7 @@ api.interceptors.response.use(
 		const status = err?.response?.status;
 		const suppress = err?.config?.headers?.['X-Suppress-Logout'] === '1';
 		if (status === 401 && !suppress) {
-			try { if (_logoutHandler) _logoutHandler(); } catch (e) {}
+			try { if (_logoutHandler) _logoutHandler(); } catch (error) { void error; }
 		}
 		return Promise.reject(err);
 	}

@@ -18,7 +18,7 @@ export default function AdminPartidas(){
       try{
         const res = await api.get('/partidas');
         if(mounted) setItems(res.data || []);
-      }catch(e){ console.error(e); }
+      }catch(error){ console.error(error); }
       finally{ if(mounted) setLoading(false); }
     }
     load();
@@ -33,13 +33,17 @@ export default function AdminPartidas(){
     setError(null);
     try{
       await login({ email: user.email, password: adminPassword });
-    }catch(e){ setError('Credenciales de administrador incorrectas'); return; }
+    }catch(error){
+      console.error(error);
+      setError('Credenciales de administrador incorrectas');
+      return;
+    }
 
     try{
       await api.delete(`/partidas/${target.id}`);
       setItems(prev => prev.filter(p => p.id !== target.id));
       closeModal();
-    }catch(e){ console.error(e); setError(e?.response?.data?.error?.message || 'Error eliminando partida'); }
+    }catch(error){ console.error(error); setError(error?.response?.data?.error?.message || 'Error eliminando partida'); }
   }
 
   return (

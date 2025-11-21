@@ -37,6 +37,7 @@ export default function AdminUsuarios(){
       // This will refresh token in storage via authService and context
       await login({ email: user.email, password: adminPassword });
     }catch(e){
+      console.error(e);
       setError('Credenciales de administrador incorrectas');
       return;
     }
