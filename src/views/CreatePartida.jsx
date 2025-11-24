@@ -61,7 +61,7 @@ export default function CreatePartida() {
       console.debug('CreatePartida response:', data);
       const id = data?.partida?.id ?? data?.id ?? data?.partidaId ?? data?.partida?.partidaId ?? null;
       if (id) {
-        navigate(`/partidas/${id}`);
+        navigate(`/partidas/${id}/lobby`);
       } else {
         console.error('No id found in create partida response', data);
         navigate('/partidas'); // fallback a listado

@@ -9,6 +9,7 @@ import Login from './views/Login';
 import Registro from './views/Registro';
 import CreatePartida from './views/CreatePartida';
 import Partida from './views/Partida';
+import Lobby from './views/Lobby';
 import EditProfile from './views/EditProfile';
 import ChangePassword from './views/ChangePassword';
 import Reglas from './views/Reglas';
@@ -36,6 +37,7 @@ function AppContent(){
               <Route path="/reglas" element={<Reglas />} />
               <Route path="/partidas" element={<Partida />} />
               <Route path="/partidas/:partidaId" element={<Partida />} />
+              <Route path="/partidas/:partidaId/lobby" element={<ProtectedRoute><Lobby /></ProtectedRoute>} />
               <Route path="/nosotros" element={<Nosotros />} />
               <Route path="/partidas-publicas" element={<PartidasPublicas/>} />
               <Route path="/login" element={<Login />} />
