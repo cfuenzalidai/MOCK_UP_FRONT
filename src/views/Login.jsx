@@ -24,7 +24,8 @@ export default function Login(){
     if ((password || '').length < 6) errs.password = 'La contraseña debe tener al menos 6 caracteres';
     if (Object.keys(errs).length) { setFieldErrors(errs); setLoading(false); return; }
     try{
-      await login({ email, password });
+      const res = await login({ email, password });
+      if (res?.access_token) localStorage.setItem('token', res.access_token);
       nav('/');
     }catch(err){
       const apiErr = err?.response?.data?.error;
