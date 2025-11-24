@@ -26,7 +26,7 @@ export async function me() {
 	const token = localStorage.getItem('token');
 	if (!token) throw new Error('No token');
 	const payload = parseJwt(token);
-	const userId = payload?.sub;
+	const userId = payload?.id || payload?.sub;
 	if (!userId) throw new Error('Invalid token payload');
 	const res = await api.get(`/usuarios/${userId}`);
 	return res.data;
@@ -36,7 +36,7 @@ export async function updateMe(payload) {
 	const token = localStorage.getItem('token');
 	if (!token) throw new Error('No token');
 	const payloadJwt = parseJwt(token);
-	const userId = payloadJwt?.sub;
+	const userId = payloadJwt?.id;
 	if (!userId) throw new Error('Invalid token payload');
 	return api.put(`/usuarios/${userId}`, payload);
 }

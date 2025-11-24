@@ -1,5 +1,6 @@
 import Mapa from "./Mapa";
 import { useState } from 'react';
+import { useEffect } from "react";
 import { useParams } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import "../assets/styles/Partida.css";
@@ -11,11 +12,91 @@ import nave_b from "../assets/img/nave_b.png";
 import nave_i from "../assets/img/nave_i.png";
 import nave_a from "../assets/img/nave_a.png";
 import api from '../services/api';
+import * as juego from '../services/juego';
 
 export default function Partida() {
   const [tirando, setTirando] = useState(false);
-  const { user } = useAuth();
+  const { user, booting } = useAuth();
   const { partidaId } = useParams();
+  const [turnoActivo, setTurnoActivo] = useState(null);
+  const [cambiandoTurno, setCambiandoTurno] = useState(false);
+  const [puntajes, setPuntajes] = useState([]);
+  const [miJugador, setMiJugador] = useState(null);
+
+
+  useEffect(() => {
+    if (!partidaId || !user?.id) return;
+
+    async function cargarMiJugador() {
+      try {
+        const jugadores = await juego.obtenerJugadores(partidaId); 
+        const encontrado = jugadores.find(j => 
+          String(j.usuarioId) === String(user.id)
+        );
+        setMiJugador(encontrado || null);
+      } catch (err) {
+        console.error("Error al cargar mis datos de jugador:", err);
+        setMiJugador(null);
+      }
+    }
+
+    cargarMiJugador();
+  }, [partidaId, user]);
+
+
+  // Función reutilizable para cargar puntajes (se usa desde efectos y tras cambios de turno)
+  async function cargarPuntajes() {
+    try {
+      const data = await juego.obtenerPuntajes(partidaId);
+      setPuntajes(data);
+    } catch (err) {
+      console.error("Error al cargar puntajes:", err);
+    }
+  }
+
+  // Cargar puntajes cuando tengamos partidaId y bootstrap de auth finalizado
+  useEffect(() => {
+    if (!partidaId) return;
+    if (booting) return; // esperar a que AuthContext termine
+    cargarPuntajes();
+  }, [partidaId, booting]);
+
+  // Cargar turno activo cuando tengamos partidaId y auth listo
+  useEffect(() => {
+    if (!partidaId) return;
+    if (booting) return;
+    let mounted = true;
+    async function cargarTurno() {
+      try {
+        const turno = await juego.obtenerTurnoActivo(partidaId);
+        if (mounted) setTurnoActivo(turno);
+      } catch (err) {
+        console.error('Error al obtener turno activo:', err);
+        if (mounted) setTurnoActivo(null);
+      }
+    }
+    cargarTurno();
+    return () => (mounted = false);
+  }, [partidaId, booting]);
+
+  // Comparación robusta contra distintos shapes que pueda devolver el backend
+  const esMiTurno = (() => {
+    if (!miJugador) return false;
+    if (!turnoActivo) return false;
+
+    const turnoJugadorId = turnoActivo.jugadorEnPartidaId || turnoActivo.jugadorId;
+
+    return String(miJugador.id) === String(turnoJugadorId);
+  })();
+
+
+
+
+
+
+
+
+
 
   async function lanzarDado() {
     if (!partidaId) {
@@ -27,8 +108,7 @@ export default function Partida() {
       setTirando(true);
 
       // Obtener turno activo para la partida
-      const resTurno = await api.get(`/tirodados/${partidaId}/activo`);
-      const turno = resTurno?.data;
+      const turno = await juego.obtenerTurnoActivo(partidaId);
 
       if (!turno) {
         alert('No se encontró un turno activo para esta partida.');
@@ -52,10 +132,13 @@ export default function Partida() {
         return;
       }
 
-      const res = await api.post('/tirodados', { turnoId });
+      // Usar el service de juego para lanzar dado
+      const res = await juego.lanzarDadoService(turnoId);
+      const turnoNuevo = await juego.obtenerTurnoActivo(partidaId);
+      setTurnoActivo(turnoNuevo);
+
       const resultado = res?.data ?? res;
       console.log('Resultado lanzar dado:', resultado);
-      // Si el backend devuelve un objeto de error (por ejemplo ALREADY_ROLLED), mostrar su mensaje
       if (resultado && resultado.error && resultado.error.message) {
         alert(resultado.error.message);
       } else {
@@ -63,7 +146,6 @@ export default function Partida() {
       }
     } catch (err) {
       console.error('Error al lanzar dado', err);
-      // Si el backend devolvió un body con error.message dentro de la respuesta de error, mostrarlo
       const remoteMessage = err?.response?.data?.error?.message || err?.response?.data?.message;
       if (remoteMessage) {
         alert(remoteMessage);
@@ -72,6 +154,30 @@ export default function Partida() {
       }
     } finally {
       setTirando(false);
+    }
+  }
+
+  async function terminarTurno() {
+    if (!partidaId) {
+      alert('No se pudo determinar la partida.');
+      return;
+    }
+    try {
+      setCambiandoTurno(true);
+      const res = await juego.cambiarTurno(partidaId);
+      const turnoNuevo = await juego.obtenerTurnoActivo(partidaId);
+      setTurnoActivo(turnoNuevo);
+
+      console.log('Cambiar turno result:', res);
+      alert('Turno cambiado');
+    } catch (err) {
+      console.error('Error al cambiar turno', err);
+      const remoteMessage = err?.response?.data?.message || err?.message;
+      alert(remoteMessage || 'No se pudo cambiar el turno. Revisa la consola.');
+    } finally {
+      setCambiandoTurno(false);
+      // refrescar puntajes tras cambio de turno
+      try { await cargarPuntajes(); } catch (e) { /* ya logueado por la función */ }
     }
   }
 
@@ -129,15 +235,19 @@ export default function Partida() {
       <div className="panel-derecho-wrap">
         <div className="panel-derecho">
           <h3>Puntaje</h3>
-          <p>Jugador 1: 10</p>
-          <p>Jugador 2: 12</p>
-          <p>Jugador 3: 8</p>
-          <p>Jugador 4: 8</p>
-          <p>Jugador 5: 8</p>
-          <p>Jugador 6: 8</p>
+          {puntajes.length === 0 ? (
+            <p>Cargando...</p>
+          ) : (
+            puntajes.map((p, i) => (
+              <p key={i}>
+                {p.nombre}: {p.puntaje}
+              </p>
+            ))
+          )}
         </div>
 
         {/* Botones independientes bajo puntaje (fuera del fondo gris) */}
+       {esMiTurno && (
         <div className="lanzar-dado-container">
           <button
             className="btn-lanzar"
@@ -146,8 +256,16 @@ export default function Partida() {
           >
             {tirando ? 'Tirando...' : 'Lanzar Dado'}
           </button>
-          <button className="btn-lanzar">Terminar Turno</button>
+
+          <button
+            className="btn-lanzar"
+            onClick={terminarTurno}
+            disabled={cambiandoTurno || tirando}
+          >
+            {cambiandoTurno ? 'Cambiando...' : 'Terminar Turno'}
+          </button>
         </div>
+      )}
       </div>
     </div>
   );
