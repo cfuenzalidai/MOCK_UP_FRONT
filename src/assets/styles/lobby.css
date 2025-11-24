@@ -1,0 +1,38 @@
+.lobby-panel { max-width: 720px; width: 100%; }
+.lobby-title { margin: 0 0 8px; }
+.lobby-meta { color: #666; margin-bottom: 8px; }
+.lobby-count { font-weight: bold; margin-bottom: 12px; }
+.lobby-list { list-style: none; padding: 0; margin: 0 0 16px; }
+.lobby-row {
+	display: grid;
+	/* columns: player name (flexible) | casa (fixed) | actions (fixed) */
+	grid-template-columns: 1fr 180px 120px;
+	align-items: center;
+	padding: 8px 12px;
+	border-bottom: 1px solid rgba(255,255,255,0.06);
+	gap: 12px;
+}
+.lobby-player-name {
+	font-weight: 500;
+	overflow: hidden;
+	text-overflow: ellipsis;
+	white-space: nowrap;
+}
+.lobby-player-meta {
+	color: #b9b9be;
+	font-weight: 600;
+	/* center the casa value inside its fixed column so all rows align visually */
+	justify-self: center;
+	text-align: center;
+}
+.lobby-actions {
+	justify-self: end;
+	margin-left: 0;
+	/* ensure an empty actions cell still reserves the same width visually */
+	min-width: 120px;
+	display: flex;
+	align-items: center;
+	justify-content: flex-end;
+}
+.lobby-controls { display:flex; gap:8px; justify-content:flex-end; }
+.btn.small { padding:4px 8px; font-size:0.85rem; }
