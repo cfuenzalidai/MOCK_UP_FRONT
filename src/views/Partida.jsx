@@ -11,6 +11,7 @@ import img_liebre from "../assets/img/liebre.png";
 import nave_b from "../assets/img/nave_b.png";
 import nave_i from "../assets/img/nave_i.png";
 import nave_a from "../assets/img/nave_a.png";
+import baseImg from "../assets/img/base.png";
 import api from '../services/api';
 import * as juego from '../services/juego';
 
@@ -21,27 +22,70 @@ export default function Partida() {
   const [turnoActivo, setTurnoActivo] = useState(null);
   const [cambiandoTurno, setCambiandoTurno] = useState(false);
   const [puntajes, setPuntajes] = useState([]);
+  const [bases, setBases] = useState([]);
+  const [jugadores, setJugadores] = useState([]);
+  const [planetas, setPlanetas] = useState([]);
   const [miJugador, setMiJugador] = useState(null);
 
 
   useEffect(() => {
     if (!partidaId || !user?.id) return;
 
-    async function cargarMiJugador() {
+    async function cargarJugadoresYMiJugador() {
       try {
-        const jugadores = await juego.obtenerJugadores(partidaId); 
-        const encontrado = jugadores.find(j => 
-          String(j.usuarioId) === String(user.id)
+        const js = await juego.jugadores(partidaId);
+        setJugadores(js || []);
+        const encontrado = (js || []).find(j =>
+          String(j.usuarioId) === String(user.id) || String(j.userId) === String(user.id) || String(j.id) === String(user.id)
         );
         setMiJugador(encontrado || null);
       } catch (err) {
         console.error("Error al cargar mis datos de jugador:", err);
+        setJugadores([]);
         setMiJugador(null);
       }
     }
 
-    cargarMiJugador();
+    cargarJugadoresYMiJugador();
   }, [partidaId, user]);
+
+
+  // Cargar bases asociadas a la partida (para mostrar bases en el mapa)
+  useEffect(() => {
+    if (!partidaId) return;
+    if (booting) return;
+    let mounted = true;
+    async function cargarBases() {
+      try {
+        const b = await juego.obtenerBases(partidaId);
+        if (mounted) setBases(b || []);
+      } catch (err) {
+        console.error('Error al cargar bases:', err);
+        if (mounted) setBases([]);
+      }
+    }
+    cargarBases();
+    return () => (mounted = false);
+  }, [partidaId, booting]);
+
+
+  // Cargar planetas asociados a la partida (para obtener esOrigen por planeta)
+  useEffect(() => {
+    if (!partidaId) return;
+    if (booting) return;
+    let mounted = true;
+    async function cargarPlanetas() {
+      try {
+        const p = await juego.obtenerPlanetas(partidaId);
+        if (mounted) setPlanetas(p || []);
+      } catch (err) {
+        console.error('Error al cargar planetas:', err);
+        if (mounted) setPlanetas([]);
+      }
+    }
+    cargarPlanetas();
+    return () => (mounted = false);
+  }, [partidaId, booting]);
 
 
   // Función reutilizable para cargar puntajes (se usa desde efectos y tras cambios de turno)
@@ -87,6 +131,16 @@ export default function Partida() {
     const turnoJugadorId = turnoActivo.jugadorEnPartidaId || turnoActivo.jugadorId;
 
     return String(miJugador.id) === String(turnoJugadorId);
+  })();
+
+  // Contar cuántas bases pertenecen al jugador actual (miJugador)
+  const miBaseCount = (() => {
+    if (!miJugador || !Array.isArray(bases)) return 0;
+    const candidateIds = [miJugador.id, miJugador.userId, miJugador.usuarioId, miJugador.jugadorEnPartidaId].filter(Boolean).map(String);
+    return bases.filter(b => {
+      const bvals = [b.jugadorId, b.userId, b.usuarioId, b.jugadorEnPartidaId, b.ownerId].filter(Boolean);
+      return bvals.some(v => candidateIds.includes(String(v)));
+    }).length;
   })();
 
 
@@ -198,6 +252,12 @@ export default function Partida() {
             <img src={nave_a} alt="Nave Avanzada" width={28} height={28} />
             <span>Naves A: 1</span>
         </div>
+        <h3>Bases</h3>
+        <div className="control">
+          <img src={baseImg} alt="Base" width={28} height={28} />
+          <span>Bases: {miBaseCount}</span>
+        </div>
+        {/* debug button removed */}
   <h3>Acciones</h3>
   <button className="accion-btn">Construir Nave</button>
   <button className="accion-btn">Mejorar Nave</button>
@@ -208,7 +268,7 @@ export default function Partida() {
 
       {/* Tablero central */}
       <div className="tablero">
-        <Mapa />
+        <Mapa bases={bases} jugadores={jugadores} planetas={planetas} />
 
         {/* Recursos debajo del tablero */}
         <div className="recursos">
