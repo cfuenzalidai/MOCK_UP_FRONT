@@ -16,6 +16,7 @@ export async function cambiarTurno(partidaId) {
 }
 
 export async function obtenerTurnoActivo(partidaId) {
+  if (!partidaId) throw new Error('partidaId es requerido');
 	const res = await api.get(`/partidas/${partidaId}/turnoActual`);
 	return res?.data;
 }
@@ -74,4 +75,61 @@ export async function obtenerJugadores(partidaId) {
   if (Array.isArray(d.data)) return d.data;
   console.warn('obtenerJugadores: respuesta inesperada, se devuelve arreglo vacío', d);
   return [];
+}
+
+// Nuevo: devuelve jugadores normalizados con campo `casa` (id de la casa) si existe.
+export async function jugadores(partidaId) {
+  const js = await obtenerJugadores(partidaId);
+  // Normalizar forma: cada jugador tendrá { id, nombre, casa }
+  return js.map(j => {
+    const id = j.id || j._id || j.jugadorEnPartidaId || j.usuarioId || j.userId || null;
+    const nombre = j.nombre || j.name || j.username || j.usuario || null;
+    const casa = j.casa || j.casaId || j.house || j.houseId || (j.casa && (typeof j.casa === 'object' ? (j.casa.id || j.casaId) : j.casa)) || null;
+    return { ...j, id, nombre, casa };
+  });
+}
+
+export async function obtenerBases(partidaId) {
+  if (!partidaId) throw new Error('partidaId es requerido');
+  try {
+    const res = await api.get(`/partidas/${partidaId}/obtenerBases`);
+    const d = res.data;
+    if (Array.isArray(d)) return d;
+    if (Array.isArray(d.bases)) return d.bases;
+    if (Array.isArray(d.data)) return d.data;
+    console.warn('obtenerBases: respuesta inesperada, se devuelve arreglo vacío', d);
+    return [];
+  } catch (err) {
+    const status = err?.response?.status;
+    if (status && [404, 405].includes(status)) {
+      // fallback: no existe endpoint -> devolver vacío
+      return [];
+    }
+    throw err;
+  }
+}
+
+export async function obtenerPlanetas(partidaId) {
+  if (!partidaId) throw new Error('partidaId es requerido');
+  // Use the confirmed endpoint for planets and normalize response to an array
+  try {
+    const res = await api.get(`/partidas/${partidaId}/obtenerPlanetas`);
+    const d = res.data;
+    if (Array.isArray(d)) return d;
+    if (Array.isArray(d.planetas)) return d.planetas;
+    if (Array.isArray(d.data)) return d.data;
+    if (Array.isArray(d.planets)) return d.planets;
+    if (d && typeof d === 'object') {
+      const arrKey = Object.keys(d).find(k => Array.isArray(d[k]));
+      if (arrKey) return d[arrKey];
+    }
+    return [];
+  } catch (err) {
+    const status = err?.response?.status;
+    if (status && [404, 405].includes(status)) {
+      // endpoint missing -> return empty list
+      return [];
+    }
+    throw err;
+  }
 }

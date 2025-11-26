@@ -1,10 +1,10 @@
-import { useState } from 'react';
+import React, { useState } from 'react';
 import Territorio from '../components/Territorio';
 import "../assets/styles/Mapa.css";
 
-export default function Mapa() {
+export default function Mapa({ bases = [], jugadores = [], planetas = [] }) {
   const cell = 80; 
-  const [territorios, _setTerritorios] = useState(() => {
+  const [territorios, setTerritorios] = useState(() => {
     const arr = [];
     let id = 1;
 
@@ -26,7 +26,6 @@ export default function Mapa() {
       return ((t ^ t >>> 14) >>> 0) / 4294967296;
     }
   }
-
   function seededShuffle(array, seedStr = 'map-seed-v1'){
     // simple hash to uint32 from seedStr
     let h = 2166136261 >>> 0;
@@ -46,7 +45,7 @@ export default function Mapa() {
   const COLOR = {
     especia: '#ef4444', // rojo
     liebre: '#edd3b0',  // beige
-    metal: '#000000ff',   // negro
+    metal: '#c6c5c5ff',   // negro
     agua: '#60a5fa'     // celeste
   };
   const pool = seededShuffle([
@@ -57,9 +56,7 @@ export default function Mapa() {
   ], '111122');
   const assignment = {};
   targetLabels.forEach((lab, i) => { assignment[lab] = pool[i]; });
-
   function handleClick(id) {
-    // Select a territory: clicking selects it (black border). Clicking again deselects.
     setSelectedId(prev => (prev === id ? null : id));
   }
 
@@ -90,7 +87,6 @@ export default function Mapa() {
             [x + cell / 2, y + cell * 0.866],
             [x + cell, y]
           ];
-
       // actualizar bounding box
       pts.forEach(p => {
         if (p[0] < minX) minX = p[0];
@@ -102,10 +98,26 @@ export default function Mapa() {
       const pointsStr = pts.map(p => p.join(',')).join(' ');
       const cx = pts.reduce((s, p) => s + p[0], 0) / 3;
       const cy = pts.reduce((s, p) => s + p[1], 0) / 3;
-  const t = territorios[idx++];
-  // only assign resourceColor if this label is in the target set
-  const resourceColor = targetLabels.includes(t.label) ? assignment[t.label] || null : null;
-      geometries.push({ ...t, pts, pointsStr, cx, cy, resourceColor });
+      const t = territorios[idx++];
+      // only assign resourceColor if this label is in the target set
+      const resourceColor = targetLabels.includes(t.label) ? assignment[t.label] || null : null;
+      // determine whether this territory's planet has a base
+      // assume base objects have a `planetaId` field referencing the territory id
+      const baseMatch = Array.isArray(bases) ? bases.find(b => String(b.planetaId) === String(t.id) || String(b.planetaId) === String(t.label) || String(b.planetaId) === String(t.label.replace(/^T/, ''))) : null;
+      const hasBase = Boolean(baseMatch);
+      // derive esOrigen from `planetas` prop if available (planet objects have esOrigen)
+      let esOrigen = false;
+      if (Array.isArray(planetas) && planetas.length > 0) {
+        const planetMatch = planetas.find(p => String(p.id) === String(t.id) || String(p.id) === String(t.label) || String(p.id) === String(t.label.replace(/^T/, '')) || String(p.planetaId) === String(t.id));
+        esOrigen = Boolean(planetMatch && (planetMatch.esOrigen === true || planetMatch.esOrigen === 'true' || planetMatch.isOrigin === true || planetMatch.isOrigin === 'true'));
+      }
+      // derive casaId from jugadores list if possible
+      let casaId = null;
+      if (baseMatch) {
+        const player = Array.isArray(jugadores) ? jugadores.find(p => String(p.id) === String(baseMatch.jugadorId) || String(p.id) === String(baseMatch.userId) || String(p.usuarioId) === String(baseMatch.jugadorId) || String(p.usuarioId) === String(baseMatch.userId) || String(p.jugadorEnPartidaId) === String(baseMatch.jugadorEnPartidaId)) : null;
+        casaId = player?.casa || baseMatch?.casa || null;
+      }
+      geometries.push({ ...t, pts, pointsStr, cx, cy, resourceColor, hasBase, base: baseMatch, casaId, esOrigen, up });
     }
   }
 
@@ -128,6 +140,7 @@ export default function Mapa() {
   });
 
   const edges = Array.from(edgeMap.values());
+  // removed debug logs for `esOrigen` on bases — `esOrigen` belongs to planet objects, not bases
   // For geometries that are NOT in targetLabels, assign a unique ordered pair of colors
   // orderedPairs = all permutations of two distinct colors (4*3 = 12)
   const allColors = [COLOR.especia, COLOR.agua, COLOR.metal, COLOR.liebre];
@@ -183,6 +196,9 @@ export default function Mapa() {
             ownerColor={g.owner}
             resourceColor={g.resourceColor}
             hasBase={g.hasBase}
+            casaId={g.casaId}
+            esOrigen={g.esOrigen}
+            pointingUp={g.up}
             cx={g.cx}
             cy={g.cy}
             onClick={handleClick}
@@ -202,7 +218,7 @@ export default function Mapa() {
             <polygon
               points={sel.pointsStr}
               fill="none"
-              stroke="#000000"
+              stroke="#c99d0c89"
               strokeWidth={4}
               strokeLinejoin="round"
               strokeLinecap="round"
@@ -215,6 +231,10 @@ export default function Mapa() {
   );
 }
 
+function getRandomOwnerColor() {
+  const colors = ['#f97316', '#60a5fa', '#34d399', '#f472b6', '#a78bfa', '#facc15'];
+  return colors[Math.floor(Math.random() * colors.length)];
+}
 
 function edgeKey(a, b) {
   const sa = `${a[0]},${a[1]}`;
