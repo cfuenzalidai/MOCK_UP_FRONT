@@ -26,6 +26,7 @@ export default function Partida() {
   const [jugadores, setJugadores] = useState([]);
   const [planetas, setPlanetas] = useState([]);
   const [miJugador, setMiJugador] = useState(null);
+  const [recursos, setRecursos] = useState({});
 
 
   useEffect(() => {
@@ -86,6 +87,59 @@ export default function Partida() {
     cargarPlanetas();
     return () => (mounted = false);
   }, [partidaId, booting]);
+
+
+  // Cargar recursos del jugador actual (miJugador) para mostrar en el bloque de recursos
+  useEffect(() => {
+    if (!miJugador) {
+      setRecursos({});
+      return;
+    }
+    if (booting) return;
+    let mounted = true;
+    async function cargarRecursos() {
+      try {
+        const id = miJugador.jugadorEnPartidaId || miJugador.id || miJugador.userId || miJugador.usuarioId;
+        if (!id) {
+          if (mounted) setRecursos({});
+          return;
+        }
+        const res = await juego.obtenerRecursos(id);
+        if (!mounted) return;
+        if (!res) {
+          setRecursos({});
+          return;
+        }
+        if (Array.isArray(res)) {
+          // fallback: normalizar arreglo
+          const map = {};
+          res.forEach(item => {
+            const nombre = item.Recurso?.nombre || item.recurso?.nombre || item.nombre || String(item.recursoId || item.id || 'recurso');
+            const cantidad = typeof item.cantidad === 'number' ? item.cantidad : Number(item.cantidad) || 0;
+            map[nombre] = cantidad;
+          });
+          setRecursos(map);
+        } else if (res.map) {
+          setRecursos(res.map || {});
+        } else if (res.data && Array.isArray(res.data)) {
+          const map = {};
+          res.data.forEach(item => {
+            const nombre = item.Recurso?.nombre || item.recurso?.nombre || item.nombre || String(item.recursoId || item.id || 'recurso');
+            const cantidad = typeof item.cantidad === 'number' ? item.cantidad : Number(item.cantidad) || 0;
+            map[nombre] = cantidad;
+          });
+          setRecursos(map);
+        } else {
+          setRecursos({});
+        }
+      } catch (err) {
+        console.error('Error al cargar recursos del jugador:', err);
+        if (mounted) setRecursos({});
+      }
+    }
+    cargarRecursos();
+    return () => (mounted = false);
+  }, [miJugador, booting]);
 
 
   // Función reutilizable para cargar puntajes (se usa desde efectos y tras cambios de turno)
@@ -274,19 +328,19 @@ export default function Partida() {
         <div className="recursos">
             <div className="recurso">
                 <img src={img_especia} alt="Especia" width={28} height={28} />
-                <span>Especia: 4</span>
+              <span>Especia: {recursos['Especia'] ?? recursos['especia'] ?? 0}</span>
             </div>
             <div className="recurso">
                 <img src={img_metal} alt="Metal" width={28} height={28} />
-                <span>Metal: 2</span>
+              <span>Metal: {recursos['Metal'] ?? recursos['metal'] ?? 0}</span>
             </div>
             <div className="recurso">
                 <img src={img_agua} alt="Agua" width={28} height={28} />
-                <span>Agua: 5</span>
+              <span>Agua: {recursos['Agua'] ?? recursos['agua'] ?? 0}</span>
             </div>
             <div className="recurso">
                 <img src={img_liebre} alt="Liebre" width={28} height={28} />
-                <span>Liebre: 5</span>
+              <span>Liebre: {recursos['Liebre'] ?? recursos['liebre'] ?? 0}</span>
             </div>
         </div>
       </div>
