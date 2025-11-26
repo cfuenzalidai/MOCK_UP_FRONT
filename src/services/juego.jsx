@@ -133,3 +133,36 @@ export async function obtenerPlanetas(partidaId) {
     throw err;
   }
 }
+
+export async function obtenerRecursos(jugadorId) {
+  if (!jugadorId) throw new Error('jugadorEnPartidaId es requerido');
+  try {
+    const res = await api.get(`/jugadoresenpartidas/${jugadorId}/recursos`);
+    const d = res.data;
+    // Normalizar a arreglo
+    const arr = Array.isArray(d)
+      ? d
+      : Array.isArray(d.data)
+      ? d.data
+      : Array.isArray(d.recursos)
+      ? d.recursos
+      : [];
+
+    // Construir mapa nombre -> cantidad
+    const map = {};
+    arr.forEach(item => {
+      const nombre = item.Recurso?.nombre || item.recurso?.nombre || item.nombre || String(item.recursoId || item.id || 'recurso');
+      const cantidad = typeof item.cantidad === 'number' ? item.cantidad : Number(item.cantidad) || 0;
+      map[nombre] = cantidad;
+    });
+
+    return { raw: arr, map };
+  } catch (err) {
+    const status = err?.response?.status;
+    if (status && [404, 405].includes(status)) {
+      // endpoint missing -> return empty
+      return { raw: [], map: {} };
+    }
+    throw err;
+  }
+}
