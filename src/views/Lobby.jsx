@@ -98,6 +98,38 @@ export default function Lobby() {
     }
   }
 
+  async function toggleListo(jugador) {
+    if (!jugador || !jugador.id) return;
+    // solo el propio usuario puede cambiar su estado "listo"
+    const miUsuarioId = user?.id;
+    const jugadorUsuarioId = jugador.usuarioId || jugador.Usuario?.id || jugador.usuario?.id;
+    if (String(miUsuarioId) !== String(jugadorUsuarioId)) {
+      alert('Solo puedes cambiar tu propio estado.');
+      return;
+    }
+
+    try {
+      const nuevo = !Boolean(jugador.listo);
+      const res = await api.put(`/jugadoresenpartidas/${jugador.id}`, { listo: nuevo });
+      // actualizar estado localmente para evitar esperar al siguiente polling
+      // la API a veces devuelve solo el registro de JugadorEnPartida sin la relación Usuario;
+      // se conserva la relación `Usuario` y otros campos locales si faltan en la respuesta.
+      setJugadores((prev) => prev.map((p) => {
+        if (String(p.id) !== String(jugador.id)) return p;
+        const returned = res.data || {};
+        return {
+          ...p,
+          ...returned,
+          // preservar la relación Usuario si la respuesta no la incluye
+          Usuario: returned.Usuario || p.Usuario,
+        };
+      }));
+    } catch (err) {
+      console.error('No se pudo actualizar estado listo', err);
+      alert('No se pudo actualizar tu estado. Revisa la consola.');
+    }
+  }
+
   async function startGame() {
     if (!partida) return;
     // Solo el owner puede iniciar
@@ -113,7 +145,8 @@ export default function Lobby() {
     }
 
     try {
-      await api.put(`/partidas/${partidaId}`, { estado: 'en_curso', iniciadoEn: new Date().toISOString() });
+      // llamar al endpoint de iniciarPartida que ahora crea los turnos y activa el primero
+      await api.put(`/partidas/${partidaId}/iniciar`);
       // navegar a la vista de partida
       navigate(`/partidas/${partidaId}`);
     } catch (err) {
@@ -159,6 +192,21 @@ export default function Lobby() {
                   {isOwner() && !isOwnerPlayer && (
                     <button className="btn danger small" onClick={() => expulsar(j)}>Expulsar</button>
                   )}
+                  {/* Botón 'Listo' - solo el propio usuario puede presionarlo */}
+                  {String(user?.id) === String(j.usuarioId || j.Usuario?.id || j.usuario?.id) ? (
+                    <button
+                      className={"btn small " + (j.listo ? 'ready' : 'not-ready')}
+                      onClick={() => toggleListo(j)}
+                      title={j.listo ? 'Marcar como no listo' : 'Marcar como listo'}
+                    >
+                      {j.listo ? 'Listo' : 'Listo'}
+                    </button>
+                  ) : (
+                    // mostrar el estado visualmente para otros (sin permitir interacción)
+                    <button className={"btn small " + (j.listo ? 'ready' : 'not-ready')} disabled>
+                      {j.listo ? 'Listo' : 'Listo'}
+                    </button>
+                  )}
                 </div>
               </li>
             );
@@ -167,14 +215,43 @@ export default function Lobby() {
 
         <div className="lobby-controls">
           <button className="btn ghost" onClick={() => navigate('/partidas-publicas')}>Volver</button>
-          <button
-            className="btn primary"
-            onClick={startGame}
-            disabled={!isOwner() || jugadores.length < maxPlayers}
-            title={(!isOwner() ? 'Solo el propietario puede iniciar la partida' : jugadores.length < maxPlayers ? 'El lobby no está lleno' : 'Iniciar partida')}
-          >
-            Iniciar partida
-          </button>
+          {isOwner() ? (
+            // Si la partida ya está en curso, el owner debe poder ingresar (misma acción que para otros)
+            partida && partida.estado === 'en_curso' ? (
+              <button
+                className="btn primary"
+                onClick={() => navigate(`/partidas/${partidaId}`)}
+                title="Ingresar a la partida"
+              >
+                Ingresar
+              </button>
+            ) : (
+              <button
+                className="btn primary"
+                onClick={startGame}
+                disabled={jugadores.length < maxPlayers}
+                title={jugadores.length < maxPlayers ? 'El lobby no está lleno' : 'Iniciar partida'}
+              >
+                Iniciar partida
+              </button>
+            )
+          ) : (
+            <button
+              className="btn primary"
+              onClick={() => {
+                // previene ingresar si la partida no ha comenzado
+                if (!partida || partida.estado !== 'en_curso') {
+                  alert('El propietario aún no inició la partida. Espera a que el owner la inicie.');
+                  return;
+                }
+                navigate(`/partidas/${partidaId}`);
+              }}
+              disabled={!partida || partida.estado !== 'en_curso'}
+              title={(!partida || partida.estado !== 'en_curso') ? 'Esperando a que el propietario inicie la partida' : 'Ingresar a la partida'}
+            >
+              Ingresar
+            </button>
+          )}
         </div>
       </div>
     </section>
