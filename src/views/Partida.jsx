@@ -350,7 +350,7 @@ export default function Partida() {
       {/* Panel derecho (wrapper to keep the dice button visually below the gray panel) */}
       <div className="panel-derecho-wrap">
         <div className="panel-derecho">
-          <h3>Puntaje</h3>
+          <h3>Puntajes</h3>
           {puntajes.length === 0 ? (
             <p>Cargando...</p>
           ) : (

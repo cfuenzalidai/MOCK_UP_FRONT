@@ -108,7 +108,16 @@ export default function Mapa({ bases = [], jugadores = [], planetas = [] }) {
       // derive esOrigen from `planetas` prop if available (planet objects have esOrigen)
       let esOrigen = false;
       if (Array.isArray(planetas) && planetas.length > 0) {
-        const planetMatch = planetas.find(p => String(p.id) === String(t.id) || String(p.id) === String(t.label) || String(p.id) === String(t.label.replace(/^T/, '')) || String(p.planetaId) === String(t.id));
+        const planetMatch = planetas.find(p =>
+        String(p.id) === String(t.id) ||
+        String(p.id) === String(t.label) ||
+        String(p.id) === String(t.label.replace(/^T/, '')) ||
+        String(p.planetaId) === String(t.id) ||
+        // nuevo: muchos endpoints devuelven idxTablero (0-based index)
+        String(p.idxTablero) === String(Number(t.id) - 1) ||
+        // por si idxTablero ya viene 1-based o está en label form:
+        String(p.idxTablero) === String(t.label.replace(/^T/, ''))
+      );
         esOrigen = Boolean(planetMatch && (planetMatch.esOrigen === true || planetMatch.esOrigen === 'true' || planetMatch.isOrigin === true || planetMatch.isOrigin === 'true'));
       }
       // derive casaId from jugadores list if possible

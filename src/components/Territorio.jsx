@@ -28,6 +28,17 @@ export default function Territorio({ id, points, fill = 'transparent', label, on
       {/* polygon with no stroke; borders are drawn globally to avoid double-stroke gaps */}
       <polygon points={points} fill={displayFill} stroke="none" fillOpacity={1} />
 
+      {/* Mostrar icono de origen aun cuando no haya base */}
+      {esOrigen && typeof cx === 'number' && typeof cy === 'number' && !hasBase && (
+        (() => {
+          // posicionar el icono ligeramente arriba del centro del hexágono
+          const iconSize = 12;
+          const iconX = cx - iconSize / 2;
+          const iconY = cy - (pointingUp ? 18 : -6); // ajustar según orientación
+          return <image href={origenImg} x={iconX} y={iconY} width={iconSize} height={iconSize} pointerEvents="none" />;
+        })()
+      )}
+
       {hasBase && typeof cx === 'number' && typeof cy === 'number' && (() => {
         // If casaId is provided, use it directly to pick the logo (preferred)
         // If casaId is provided, use it to pick a house logo. Do not fallback to generic base image.

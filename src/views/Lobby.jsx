@@ -3,6 +3,7 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import api from '../services/api';
 import '../assets/styles/lobby.css';
+import * as juego from '../services/juego';
 
 export default function Lobby() {
   const { partidaId } = useParams();
@@ -165,12 +166,11 @@ export default function Lobby() {
 
   async function startGame() {
     if (!partida) return;
-    // Solo el owner puede iniciar
     if (!isOwner()) {
       alert('Solo el propietario puede iniciar la partida.');
       return;
     }
-    // Validar que el lobby esté lleno (según tamMax)
+
     const max = Number(partida.tamMax || partida.max || 0);
     if (Number(jugadores.length) < max) {
       alert('El lobby no está lleno aún. No puedes iniciar la partida hasta que se llene.');
@@ -178,13 +178,30 @@ export default function Lobby() {
     }
 
     try {
-      // llamar al endpoint de iniciarPartida que ahora crea los turnos y activa el primero
+      setLoading(true); // crea/setea estado loading si no existe
+      // Llamada al endpoint (usa el helper o api.put directamente)
+      // await juego.cambiarEstadoPartida(partidaId);
       await api.put(`/partidas/${partidaId}/iniciar`);
-      // navegar a la vista de partida
+
+      // éxito -> ir al tablero
       navigate(`/partidas/${partidaId}`);
     } catch (err) {
       console.error('Error iniciando la partida', err);
-      alert('No se pudo iniciar la partida. Revisa la consola.');
+      const status = err?.response?.status;
+      const code = err?.response?.data?.error?.code;
+      const msg = err?.response?.data?.error?.message || err?.response?.data?.message;
+
+      // Si ya fue iniciada por otro, navegar también al tablero
+      if (status === 409 || code === 'ALREADY_STARTED') {
+        alert('La partida ya fue iniciada. Redirigiendo al tablero.');
+        navigate(`/partidas/${partidaId}`);
+        return;
+      }
+
+      // mostrar mensaje del servidor si existe
+      alert(msg || 'No se pudo iniciar la partida. Revisa la consola.');
+    } finally {
+      setLoading(false);
     }
   }
 
@@ -262,7 +279,7 @@ export default function Lobby() {
               <button
                 className="btn primary"
                 onClick={startGame}
-                disabled={jugadores.length < maxPlayers}
+                disabled={jugadores.length < maxPlayers || loading}
                 title={jugadores.length < maxPlayers ? 'El lobby no está lleno' : 'Iniciar partida'}
               >
                 Iniciar partida
