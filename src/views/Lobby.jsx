@@ -10,6 +10,7 @@ export default function Lobby() {
   const { user } = useAuth();
   const [partida, setPartida] = useState(null);
   const [jugadores, setJugadores] = useState([]);
+  const [ownerLabel, setOwnerLabel] = useState(null);
   const [casasMap, setCasasMap] = useState({});
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -33,6 +34,38 @@ export default function Lobby() {
         console.debug('[Lobby] fetchAll partida:', partidaData);
         console.debug('[Lobby] fetchAll jugadores:', jugadoresData);
         setPartida(partidaData);
+         // Resolver label del owner de forma robusta: si no viene el nombre, intentar obtenerlo por ownerId
+         (async () => {
+           try {
+             const ownerObj = partidaData?.owner;
+             const ownerId = partidaData?.ownerId || (ownerObj && (ownerObj.id || ownerObj._id)) || ownerObj;
+             if (!ownerId) {
+               // si el objeto owner ya tiene nombre mostrarlo, si no, fallback
+               const label = ownerObj?.nombre || ownerObj?.name || ownerObj?.email || ownerObj || null;
+               setOwnerLabel(label);
+               return;
+             }
+ 
+             // Si ownerObj es un objeto con nombre ya, úsalo
+             if (ownerObj && (ownerObj.nombre || ownerObj.name || ownerObj.email)) {
+               setOwnerLabel(ownerObj.nombre || ownerObj.name || ownerObj.email);
+               return;
+             }
+ 
+             // Intentar consultar el usuario por id para obtener nombre legible
+             try {
+               const ures = await api.get(`/usuarios/${ownerId}`);
+               const udata = ures?.data;
+               const label = udata?.nombre || udata?.name || udata?.email || String(ownerId);
+               setOwnerLabel(label);
+             } catch (e) {
+               // fallback: usar ownerId o ownerObj tal cual
+               setOwnerLabel(String(ownerId));
+             }
+           } catch (e) {
+            setOwnerLabel(null);
+           }
+         })();
         setJugadores(jugadoresData);
         setError(null);
       } catch (err) {
@@ -175,7 +208,7 @@ export default function Lobby() {
     <section className="hero hero--center">
       <div className="panel lobby-panel">
         <h2 className="lobby-title">Lobby: {partida.nombre || `#${partidaId}`}</h2>
-        <div className="lobby-meta">Propietario: {owner?.nombre || owner?.email || owner?.id}</div>
+        <div className="lobby-meta">Propietario: {ownerLabel ?? owner?.nombre ?? owner?.email ?? owner?.id}</div>
         <div className="lobby-count">Jugadores: {jugadores.length}/{maxPlayers}</div>
 
         <ul className="lobby-list">
