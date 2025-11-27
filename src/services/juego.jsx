@@ -53,7 +53,7 @@ export async function cambiarEstadoPartida(partidaId) {
   if (!partidaId) throw new Error('partidaId es requerido');
 
   try {
-    const res = await api.post(`/partidas/${partidaId}/iniciar`);
+    const res = await api.put(`/partidas/${partidaId}/iniciar`);
     return res.data;
   } catch (err) {
     const status = err?.response?.status;
