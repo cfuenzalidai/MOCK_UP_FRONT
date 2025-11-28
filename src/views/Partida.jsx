@@ -279,7 +279,48 @@ export default function Partida() {
       if (resultado && resultado.error && resultado.error.message) {
         alert(resultado.error.message);
       } else {
-        alert('Resultado: ' + JSON.stringify(resultado));
+        try {
+          const tiro = resultado?.tiro || resultado?.roll || null;
+          const recursos = resultado?.recursosOtorgados || resultado?.recursos || resultado?.recursosObtenidos || [];
+
+          // Helper para obtener nombre legible del recurso
+          const recursoNameFromId = (id) => {
+            const map = { 1: 'Especia', 2: 'Metal', 3: 'Agua', 4: 'Liebre' };
+            return map[id] || String(id);
+          };
+
+          const multiplicador = tiro?.multiplicador ?? tiro?.mult ?? null;
+          const fallbackVal = tiro && (tiro.valor ?? tiro.id ?? tiro.face ?? tiro.numero)
+            ? (tiro.valor ?? tiro.id ?? tiro.face ?? tiro.numero)
+            : null;
+
+          if (Array.isArray(recursos) && recursos.length > 0) {
+            // Formatear múltiples recursos si es necesario
+            const partes = recursos.map(r => {
+              const cantidad = r.cantidad ?? r.cant ?? r.amount ?? 0;
+              const nombre = r.Recurso?.nombre || r.recurso?.nombre || recursoNameFromId(r.recursoId || r.RecursoId || r.recursoId);
+              return `${cantidad} ${nombre}`;
+            });
+            const recursosTxt = partes.join(', ');
+            const tiroTxt = multiplicador != null
+              ? `Te salió un x${multiplicador}, `
+              : (fallbackVal != null ? `Te salió un ${fallbackVal}, ` : 'Resultado: ');
+            const sad = multiplicador === 0 ? ' 😢' : '';
+            alert(`${tiroTxt}obtienes ${recursosTxt}${sad}`);
+          } else if (multiplicador != null || fallbackVal != null) {
+            if (multiplicador != null) {
+              const sad = multiplicador === 0 ? ' 😢' : '';
+              alert(`Te salió un x${multiplicador}${sad}`);
+            } else {
+              alert(`Te salió un ${fallbackVal}`);
+            }
+          } else {
+            alert('Resultado: ' + JSON.stringify(resultado));
+          }
+        } catch (e) {
+          console.error('Error formateando resultado del dado:', e);
+          alert('Resultado: ' + JSON.stringify(resultado));
+        }
       }
     } catch (err) {
       console.error('Error al lanzar dado', err);
