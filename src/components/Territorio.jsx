@@ -8,7 +8,11 @@ import logoAnimal from "../assets/img/animal-skull-svgrepo-com.svg";
 // import baseImg from "../assets/img/base.png";
 import origenImg from "../assets/img/origen.png";
 
-export default function Territorio({ id, points, fill = 'transparent', label, onClick, ownerColor, hasBase, base = null, cx, cy, resourceColor, showLabel = false, casaId = null, esOrigen = null, pointingUp = true }){
+export default function Territorio({
+  id, points, fill = 'transparent', label, onClick, ownerColor, hasBase, base = null,
+  cx, cy, resourceColor, showLabel = false, casaId = null, esOrigen = null, pointingUp = true,
+  baseOwnerLabel = null, originOwnerLabel = null
+}) {
   // points: string "x1,y1 x2,y2 x3,y3"
   // Priority: ownerColor (player) > resourceColor (tile) > default fill
   const displayFill = ownerColor || resourceColor || fill;
@@ -27,6 +31,34 @@ export default function Territorio({ id, points, fill = 'transparent', label, on
     <g className={"territorio" + (onClick ? ' clickable' : '')} data-id={id} onClick={() => onClick && onClick(id)}>
       {/* polygon with no stroke; borders are drawn globally to avoid double-stroke gaps */}
       <polygon points={points} fill={displayFill} stroke="none" fillOpacity={1} />
+      
+      {/* Mostrar icono de origen aun cuando no haya base */}
+      {esOrigen && typeof cx === 'number' && typeof cy === 'number' && !hasBase && (
+        (() => {
+          const iconSize = 12;
+          const iconX = cx - iconSize / 2;
+          const iconY = cy - (pointingUp ? 18 : -6); // ajustar si es necesario
+          return (
+            <>
+              <image href={origenImg} x={iconX} y={iconY} width={iconSize} height={iconSize} pointerEvents="none" />
+              {originOwnerLabel && (
+                <text
+                  x={cx}
+                  y={cy}
+                  textAnchor="middle"
+                  dominantBaseline="middle"
+                  fontSize={9}
+                  fill="#ffffff"
+                  pointerEvents="none"
+                  style={{ fontWeight: 700, userSelect: 'none' }}
+                >
+                  {originOwnerLabel}
+                </text>
+              )}
+            </>
+          );
+        })()
+      )}
 
       {hasBase && typeof cx === 'number' && typeof cy === 'number' && (() => {
         // If casaId is provided, use it directly to pick the logo (preferred)
@@ -69,6 +101,20 @@ export default function Territorio({ id, points, fill = 'transparent', label, on
             return (
               <>
                 <image href={href} x={cx - size/2} y={logoY} width={size} height={size} pointerEvents="none" />
+                {baseOwnerLabel && (
+                  <text
+                    x={cx}
+                    y={cy}
+                    textAnchor="middle"
+                    dominantBaseline="middle"
+                    fontSize={10}
+                    fill="#ffffff"
+                    pointerEvents="none"
+                    style={{ fontWeight: 700, userSelect: 'none' }}
+                  >
+                    {baseOwnerLabel}
+                  </text>
+                )}
                 {isOrigen && (
                   <image href={origenImg} x={iconX} y={iconY} width={iconSize} height={iconSize} pointerEvents="none" />
                 )}
@@ -127,6 +173,19 @@ export default function Territorio({ id, points, fill = 'transparent', label, on
           return (
             <>
               <image href={logo} x={cx - size/2} y={logoY} width={size} height={size} pointerEvents="none" />
+              {baseOwnerLabel && (
+                <text
+                  x={cx}
+                  y={logoY + size + 12}
+                  textAnchor="middle"
+                  fontSize={10}
+                  fill="#ffffff"
+                  pointerEvents="none"
+                  style={{ fontWeight: 700 }}
+                >
+                  {baseOwnerLabel}
+                </text>
+              )}
               {isOrigen && (
                 <image href={origenImg} x={iconX} y={iconY} width={iconSize} height={iconSize} pointerEvents="none" />
               )}

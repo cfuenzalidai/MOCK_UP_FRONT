@@ -99,25 +99,82 @@ export default function Mapa({ bases = [], jugadores = [], planetas = [] }) {
       const cx = pts.reduce((s, p) => s + p[0], 0) / 3;
       const cy = pts.reduce((s, p) => s + p[1], 0) / 3;
       const t = territorios[idx++];
+      // Índice 0-based de la casilla en el tablero (coincide con p.idxTablero del backend)
+      const territoryIndex = idx - 1;
+
       // only assign resourceColor if this label is in the target set
       const resourceColor = targetLabels.includes(t.label) ? assignment[t.label] || null : null;
+
       // determine whether this territory's planet has a base
-      // assume base objects have a `planetaId` field referencing the territory id
-      const baseMatch = Array.isArray(bases) ? bases.find(b => String(b.planetaId) === String(t.id) || String(b.planetaId) === String(t.label) || String(b.planetaId) === String(t.label.replace(/^T/, ''))) : null;
+      const baseMatch = Array.isArray(bases)
+        ? bases.find(b =>
+            String(b.planetaId) === String(t.id) ||
+            String(b.planetaId) === String(t.label) ||
+            String(b.planetaId) === String(t.label.replace(/^T/, ''))
+          )
+        : null;
       const hasBase = Boolean(baseMatch);
-      // derive esOrigen from `planetas` prop if available (planet objects have esOrigen)
-      let esOrigen = false;
-      if (Array.isArray(planetas) && planetas.length > 0) {
-        const planetMatch = planetas.find(p => String(p.id) === String(t.id) || String(p.id) === String(t.label) || String(p.id) === String(t.label.replace(/^T/, '')) || String(p.planetaId) === String(t.id));
-        esOrigen = Boolean(planetMatch && (planetMatch.esOrigen === true || planetMatch.esOrigen === 'true' || planetMatch.isOrigin === true || planetMatch.isOrigin === 'true'));
+
+      // Resolver propietario del base (si existe)
+      let baseOwnerLabel = null;
+      if (baseMatch && Array.isArray(jugadores) && jugadores.length > 0) {
+        const match = jugadores.find(p =>
+          String(p.id) === String(baseMatch.jugadorEnPartidaId) ||
+          String(p.jugadorEnPartidaId) === String(baseMatch.jugadorEnPartidaId) ||
+          String(p.id) === String(baseMatch.jugadorId) ||
+          String(p.usuarioId) === String(baseMatch.jugadorId) ||
+          String(p.userId) === String(baseMatch.jugadorId)
+        );
+        baseOwnerLabel = match?.Usuario?.nombre || match?.usuario?.nombre || match?.nombre || match?.name || null;
+        if (baseOwnerLabel && baseOwnerLabel.length > 14) baseOwnerLabel = baseOwnerLabel.slice(0, 14) + '…';
       }
+
+      // derive esOrigen from `planetas` prop if available (planet objects have esOrigen)
+      // Priorizar idxTablero (0-based) para evitar confusiones con ids de BD
+      let esOrigen = false;
+      let originOwnerLabel = null;
+      if (Array.isArray(planetas) && planetas.length > 0) {
+        const planetMatch = planetas.find(p => {
+          // PRIORIDAD: comparar idxTablero (0-based) con el índice de la casilla
+          if (p.idxTablero !== undefined && p.idxTablero !== null) {
+            if (Number(p.idxTablero) === Number(territoryIndex)) return true;
+            if (String(p.idxTablero) === String(territoryIndex)) return true;
+          }
+          // fallbacks adicionales por compatibilidad
+          if (p.id !== undefined && p.id !== null) {
+            if (String(p.id) === String(t.id)) return true;
+            if (String(p.id) === String(t.label)) return true;
+            if (String(p.id) === String(t.label.replace(/^T/, ''))) return true;
+          }
+          if (p.planetaId !== undefined && p.planetaId !== null) {
+            if (String(p.planetaId) === String(t.id)) return true;
+          }
+          return false;
+        });
+
+        esOrigen = Boolean(planetMatch && (planetMatch.esOrigen === true || planetMatch.esOrigen === 'true' || planetMatch.isOrigin === true || planetMatch.isOrigin === 'true'));
+
+        // si hay planetMatch, intentar resolver su propietario (jugadorEnPartidaId)
+        if (planetMatch && (planetMatch.jugadorEnPartidaId || planetMatch.jugadorId || planetMatch.userId || planetMatch.usuarioId)) {
+          const ownerKey = planetMatch.jugadorEnPartidaId ?? planetMatch.jugadorId ?? planetMatch.userId ?? planetMatch.usuarioId;
+          const matchP = jugadores.find(p =>
+            String(p.id) === String(ownerKey) ||
+            String(p.jugadorEnPartidaId) === String(ownerKey) ||
+            String(p.usuarioId) === String(ownerKey) ||
+            String(p.userId) === String(ownerKey)
+          );
+          originOwnerLabel = matchP?.Usuario?.nombre || matchP?.usuario?.nombre || matchP?.nombre || matchP?.name || null;
+          if (originOwnerLabel && originOwnerLabel.length > 14) originOwnerLabel = originOwnerLabel.slice(0, 14) + '…';
+        }
+      }
+
       // derive casaId from jugadores list if possible
       let casaId = null;
       if (baseMatch) {
         const player = Array.isArray(jugadores) ? jugadores.find(p => String(p.id) === String(baseMatch.jugadorId) || String(p.id) === String(baseMatch.userId) || String(p.usuarioId) === String(baseMatch.jugadorId) || String(p.usuarioId) === String(baseMatch.userId) || String(p.jugadorEnPartidaId) === String(baseMatch.jugadorEnPartidaId)) : null;
         casaId = player?.casa || baseMatch?.casa || null;
       }
-      geometries.push({ ...t, pts, pointsStr, cx, cy, resourceColor, hasBase, base: baseMatch, casaId, esOrigen, up });
+      geometries.push({ ...t, pts, pointsStr, cx, cy, resourceColor, hasBase, base: baseMatch, casaId, esOrigen, originOwnerLabel, baseOwnerLabel, up });
     }
   }
 
@@ -189,19 +246,21 @@ export default function Mapa({ bases = [], jugadores = [], planetas = [] }) {
         {/* Territorios */}
         {geometries.map(g => (
           <Territorio
-            key={g.id}
-            id={g.id}
-            points={g.pointsStr}
-            label={g.label}
-            ownerColor={g.owner}
-            resourceColor={g.resourceColor}
-            hasBase={g.hasBase}
-            casaId={g.casaId}
-            esOrigen={g.esOrigen}
-            pointingUp={g.up}
-            cx={g.cx}
-            cy={g.cy}
-            onClick={handleClick}
+          key={g.id}
+          id={g.id}
+          points={g.pointsStr}
+          label={g.label}
+          ownerColor={g.owner}
+          resourceColor={g.resourceColor}
+          hasBase={g.hasBase}
+          casaId={g.casaId}
+          esOrigen={g.esOrigen}
+          originOwnerLabel={g.originOwnerLabel}
+          baseOwnerLabel={g.baseOwnerLabel}
+          pointingUp={g.up}
+          cx={g.cx}
+          cy={g.cy}
+          onClick={handleClick}
           />
         ))}
 

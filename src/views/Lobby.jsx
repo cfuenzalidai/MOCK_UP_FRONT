@@ -3,6 +3,7 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import api from '../services/api';
 import '../assets/styles/lobby.css';
+import * as juego from '../services/juego';
 
 export default function Lobby() {
   const { partidaId } = useParams();
@@ -10,6 +11,7 @@ export default function Lobby() {
   const { user } = useAuth();
   const [partida, setPartida] = useState(null);
   const [jugadores, setJugadores] = useState([]);
+  const [ownerLabel, setOwnerLabel] = useState(null);
   const [casasMap, setCasasMap] = useState({});
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -33,6 +35,38 @@ export default function Lobby() {
         console.debug('[Lobby] fetchAll partida:', partidaData);
         console.debug('[Lobby] fetchAll jugadores:', jugadoresData);
         setPartida(partidaData);
+         // Resolver label del owner de forma robusta: si no viene el nombre, intentar obtenerlo por ownerId
+         (async () => {
+           try {
+             const ownerObj = partidaData?.owner;
+             const ownerId = partidaData?.ownerId || (ownerObj && (ownerObj.id || ownerObj._id)) || ownerObj;
+             if (!ownerId) {
+               // si el objeto owner ya tiene nombre mostrarlo, si no, fallback
+               const label = ownerObj?.nombre || ownerObj?.name || ownerObj?.email || ownerObj || null;
+               setOwnerLabel(label);
+               return;
+             }
+ 
+             // Si ownerObj es un objeto con nombre ya, úsalo
+             if (ownerObj && (ownerObj.nombre || ownerObj.name || ownerObj.email)) {
+               setOwnerLabel(ownerObj.nombre || ownerObj.name || ownerObj.email);
+               return;
+             }
+ 
+             // Intentar consultar el usuario por id para obtener nombre legible
+             try {
+               const ures = await api.get(`/usuarios/${ownerId}`);
+               const udata = ures?.data;
+               const label = udata?.nombre || udata?.name || udata?.email || String(ownerId);
+               setOwnerLabel(label);
+             } catch (e) {
+               // fallback: usar ownerId o ownerObj tal cual
+               setOwnerLabel(String(ownerId));
+             }
+           } catch (e) {
+            setOwnerLabel(null);
+           }
+         })();
         setJugadores(jugadoresData);
         setError(null);
       } catch (err) {
@@ -132,12 +166,11 @@ export default function Lobby() {
 
   async function startGame() {
     if (!partida) return;
-    // Solo el owner puede iniciar
     if (!isOwner()) {
       alert('Solo el propietario puede iniciar la partida.');
       return;
     }
-    // Validar que el lobby esté lleno (según tamMax)
+
     const max = Number(partida.tamMax || partida.max || 0);
     if (Number(jugadores.length) < max) {
       alert('El lobby no está lleno aún. No puedes iniciar la partida hasta que se llene.');
@@ -145,13 +178,30 @@ export default function Lobby() {
     }
 
     try {
-      // llamar al endpoint de iniciarPartida que ahora crea los turnos y activa el primero
+      setLoading(true); // crea/setea estado loading si no existe
+      // Llamada al endpoint (usa el helper o api.put directamente)
+      // await juego.cambiarEstadoPartida(partidaId);
       await api.put(`/partidas/${partidaId}/iniciar`);
-      // navegar a la vista de partida
+
+      // éxito -> ir al tablero
       navigate(`/partidas/${partidaId}`);
     } catch (err) {
       console.error('Error iniciando la partida', err);
-      alert('No se pudo iniciar la partida. Revisa la consola.');
+      const status = err?.response?.status;
+      const code = err?.response?.data?.error?.code;
+      const msg = err?.response?.data?.error?.message || err?.response?.data?.message;
+
+      // Si ya fue iniciada por otro, navegar también al tablero
+      if (status === 409 || code === 'ALREADY_STARTED') {
+        alert('La partida ya fue iniciada. Redirigiendo al tablero.');
+        navigate(`/partidas/${partidaId}`);
+        return;
+      }
+
+      // mostrar mensaje del servidor si existe
+      alert(msg || 'No se pudo iniciar la partida. Revisa la consola.');
+    } finally {
+      setLoading(false);
     }
   }
 
@@ -175,7 +225,7 @@ export default function Lobby() {
     <section className="hero hero--center">
       <div className="panel lobby-panel">
         <h2 className="lobby-title">Lobby: {partida.nombre || `#${partidaId}`}</h2>
-        <div className="lobby-meta">Propietario: {owner?.nombre || owner?.email || owner?.id}</div>
+        <div className="lobby-meta">Propietario: {ownerLabel ?? owner?.nombre ?? owner?.email ?? owner?.id}</div>
         <div className="lobby-count">Jugadores: {jugadores.length}/{maxPlayers}</div>
 
         <ul className="lobby-list">
@@ -229,7 +279,7 @@ export default function Lobby() {
               <button
                 className="btn primary"
                 onClick={startGame}
-                disabled={jugadores.length < maxPlayers}
+                disabled={jugadores.length < maxPlayers || loading}
                 title={jugadores.length < maxPlayers ? 'El lobby no está lleno' : 'Iniciar partida'}
               >
                 Iniciar partida

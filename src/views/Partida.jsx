@@ -391,22 +391,22 @@ export default function Partida() {
     <div className="partida-container">
   {/* Panel izquierdo */}
       <div className="panel-izquierdo">
-        <h3>Naves:</h3>
-        <div className="control">
-        <img src={nave_b} alt="Nave Basica" width={28} height={28} />
-        <span>Naves Básicas: {navesCount.basica}</span>
-        </div>
-        <div className="control">
-        <img src={nave_i} alt="Nave Intermedia" width={28} height={28} />
-        <span>Naves Intermedias: {navesCount.intermedia}</span>
-        </div>
-        <div className="control">
-          <img src={nave_a} alt="Nave Avanzada" width={28} height={28} />
-          <span>Naves Avanzadas: {navesCount.avanzada}</span>
+        <h3>Naves</h3>
+          <div className="control">
+           <img src={nave_b} alt="Nave Basica" className="icon-nave icon-nave--b" />
+           <span>Naves Básicas: {navesCount.basica}</span>
+         </div>
+         <div className="control">
+           <img src={nave_i} alt="Nave Intermedia" className="icon-nave icon-nave--i" />
+           <span>Naves Intermedias: {navesCount.intermedia}</span>
+         </div>
+         <div className="control">
+           <img src={nave_a} alt="Nave Avanzada" className="icon-nave icon-nave--a" />
+           <span>Naves Avanzadas: {navesCount.avanzada}</span>
         </div>
         <h3>Bases</h3>
         <div className="control">
-          <img src={baseImg} alt="Base" width={28} height={28} />
+          <img src={baseImg} alt="Base" className="icon-base" />
           <span>Bases: {miBaseCount}</span>
         </div>
         {/* debug button removed */}
@@ -426,41 +426,46 @@ export default function Partida() {
 
       {/* Tablero central */}
       <div className="tablero">
-        <Mapa bases={bases} jugadores={jugadores} planetas={planetas} />
-
-        {/* Recursos debajo del tablero */}
-        <div className="recursos">
-            <div className="recurso">
-                <img src={img_especia} alt="Especia" width={28} height={28} />
-              <span>Especia: {recursos['Especia'] ?? recursos['especia'] ?? 0}</span>
-            </div>
-            <div className="recurso">
-                <img src={img_metal} alt="Metal" width={28} height={28} />
-              <span>Metal: {recursos['Metal'] ?? recursos['metal'] ?? 0}</span>
-            </div>
-            <div className="recurso">
-                <img src={img_agua} alt="Agua" width={28} height={28} />
-              <span>Agua: {recursos['Agua'] ?? recursos['agua'] ?? 0}</span>
-            </div>
-            <div className="recurso">
-                <img src={img_liebre} alt="Liebre" width={28} height={28} />
-              <span>Liebre: {recursos['Liebre'] ?? recursos['liebre'] ?? 0}</span>
-            </div>
-        </div>
+        <div className="map-wrapper">
+           <Mapa bases={bases} jugadores={jugadores} planetas={planetas} />
+ 
+           {/* Recursos posicionados a distancia fija respecto al mapa */}
+           <div className="recursos">
+             <div className="recurso">
+               <img src={img_especia} alt="Especia" className="icon-recurso icon-recurso--especia" />
+               <span>Especia: {recursos['Especia'] ?? recursos['especia'] ?? 0}</span>
+             </div>
+             <div className="recurso">
+               <img src={img_metal} alt="Metal" className="icon-recurso icon-recurso--metal" />
+               <span>Metal: {recursos['Metal'] ?? recursos['metal'] ?? 0}</span>
+             </div>
+             <div className="recurso">
+               <img src={img_agua} alt="Agua" className="icon-recurso icon-recurso--agua" />
+               <span>Agua: {recursos['Agua'] ?? recursos['agua'] ?? 0}</span>
+             </div>
+             <div className="recurso">
+               <img src={img_liebre} alt="Liebre" className="icon-recurso icon-recurso--liebre" />
+               <span>Liebre: {recursos['Liebre'] ?? recursos['liebre'] ?? 0}</span>
+             </div>
+           </div>
+          </div>
       </div>
 
       {/* Panel derecho (wrapper to keep the dice button visually below the gray panel) */}
       <div className="panel-derecho-wrap">
         <div className="panel-derecho">
-          <h3>Puntaje</h3>
+          <h3>Puntajes</h3>
           {puntajes.length === 0 ? (
             <p>Cargando...</p>
           ) : (
-            puntajes.map((p, i) => (
-              <p key={i}>
-                {p.nombre}: {p.puntaje}
-              </p>
-            ))
+            <div className="puntajes-list">
+              {puntajes.map((p, i) => (
+                <div className="puntaje-item" key={i}>
+                  <div className="puntaje-nombre">{p.nombre}</div>
+                  <div className="puntaje-valor" aria-label={`Puntaje de ${p.nombre}`}>{p.puntaje}</div>
+                </div>
+              ))}
+            </div>
           )}
         </div>
 

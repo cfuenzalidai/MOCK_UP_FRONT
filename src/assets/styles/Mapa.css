@@ -14,8 +14,8 @@
      Use a stricter max-width so the map reduces size more when zooming out. */
   width: 100%;
   height: auto;
-  max-width: 90vw;
-  max-height: 80vh;
+  max-width: 85vw;
+  max-height: 75vh;
 }
 
 /* --- Configura la grilla o disposición de los territorios --- */
@@ -34,8 +34,8 @@
   align-items: center;
   color: white;
   border: 1px solid #999;
-  width: 70px;
-  height: 100px;
+  width: 65px;
+  height: 90px;
   text-align: center;
 }
 
@@ -139,7 +139,7 @@
 .rules-block ul{ padding-left:18px; }
 
 .recurso { display:flex; align-items:center; gap:8px; margin:6px 0; }
-.recurso img { display:block; width:28px; height:28px; object-fit:contain; }
+.recurso img:not(.icon-recurso) { display:block; width:28px; height:28px; object-fit:contain; }
 /* Hero centrado para listados */
 .hero.hero--center{
   display:flex;
