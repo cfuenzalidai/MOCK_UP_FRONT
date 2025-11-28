@@ -166,3 +166,22 @@ export async function obtenerRecursos(jugadorId) {
     throw err;
   }
 }
+
+export async function obtenerNaves(partidaId, jugadorEnPartidaId) {
+  if (!partidaId) throw new Error('partidaId es requerido');
+  try {
+    const qs = [];
+    qs.push(`partidaId=${encodeURIComponent(partidaId)}`);
+    if (jugadorEnPartidaId) qs.push(`jugadorEnPartidaId=${encodeURIComponent(jugadorEnPartidaId)}`);
+    const res = await api.get(`/naves?${qs.join('&')}`);
+    const d = res.data;
+    if (Array.isArray(d)) return d;
+    if (Array.isArray(d.data)) return d.data;
+    if (Array.isArray(d.naves)) return d.naves;
+    return [];
+  } catch (err) {
+    const status = err?.response?.status;
+    if (status && [404, 405].includes(status)) return [];
+    throw err;
+  }
+}
