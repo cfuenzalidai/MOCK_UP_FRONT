@@ -1,6 +1,5 @@
 import Mapa from "./Mapa";
-import { useState } from 'react';
-import { useEffect } from "react";
+import { useState, useEffect, useRef } from 'react';
 import { useParams } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import "../assets/styles/Partida.css";
@@ -29,6 +28,9 @@ export default function Partida() {
   const [recursos, setRecursos] = useState({});
   const [buildingNave, setBuildingNave] = useState(false);
   const [navesCount, setNavesCount] = useState({ basica: 0, intermedia: 0, avanzada: 0 });
+  const [improving, setImproving] = useState(false);
+  const prevIsMyTurnRef = useRef(false);
+  const initialisedTurnRef = useRef(false);
 
 
   useEffect(() => {
@@ -70,6 +72,48 @@ export default function Partida() {
     cargarBases();
     return () => (mounted = false);
   }, [partidaId, booting]);
+
+  // Helper para decidir si un turno pertenece al jugador dado
+  function isTurnoParaJugador(turno, jugador) {
+    if (!turno || !jugador) return false;
+    const turnoJugadorId = turno.jugadorEnPartidaId || turno.jugadorId || turno.jugador?.id;
+    const actorId = jugador.jugadorEnPartidaId || jugador.id || jugador.userId || jugador.usuarioId;
+    if (!turnoJugadorId || !actorId) return false;
+    return String(turnoJugadorId) === String(actorId);
+  }
+
+  // Inicializar la referencia de estado previo una sola vez cuando tengamos datos
+  useEffect(() => {
+    if (!initialisedTurnRef.current && miJugador && turnoActivo !== null) {
+      prevIsMyTurnRef.current = isTurnoParaJugador(turnoActivo, miJugador);
+      initialisedTurnRef.current = true;
+    }
+  }, [miJugador, turnoActivo]);
+
+  // Polling: comprobar turno activo periódicamente y notificar al jugador cuando
+  // pase a ser su turno. Esto evita que otros jugadores tengan que recargar.
+  useEffect(() => {
+    if (!partidaId) return;
+    if (booting) return;
+    let mounted = true;
+    const interval = setInterval(async () => {
+      try {
+        const turno = await juego.obtenerTurnoActivo(partidaId);
+        if (!mounted) return;
+        setTurnoActivo(turno);
+        const wasMyTurn = prevIsMyTurnRef.current;
+        const nowMyTurn = isTurnoParaJugador(turno, miJugador);
+        if (!wasMyTurn && nowMyTurn) {
+          alert('¡Es tu turno!');
+        }
+        prevIsMyTurnRef.current = nowMyTurn;
+      } catch (err) {
+        // ignore transient errors
+      }
+    }, 2000);
+
+    return () => { mounted = false; clearInterval(interval); };
+  }, [partidaId, booting, miJugador]);
 
 
   // Cargar planetas asociados a la partida (para obtener esOrigen por planeta)
@@ -428,6 +472,88 @@ export default function Partida() {
     }
   }
 
+  async function mejorarNaveHandler() {
+    if (!partidaId) return alert('No se pudo determinar la partida.');
+    if (!miJugador) return alert('No se pudo determinar tu jugador en la partida.');
+    try {
+      setImproving(true);
+      const turno = await juego.obtenerTurnoActivo(partidaId);
+      if (!turno) return alert('No hay un turno activo para esta partida.');
+      const actorId = miJugador.jugadorEnPartidaId || miJugador.id || miJugador.userId || miJugador.usuarioId;
+      const turnoJugadorId = turno.jugadorEnPartidaId || turno.jugadorId || turno.jugador?.id;
+      if (!actorId) return alert('No se pudo determinar tu id de jugador.');
+      if (String(turnoJugadorId) !== String(actorId)) return alert('No es tu turno. Solo puedes mejorar cuando sea tu turno activo.');
+
+      // obtener naves del jugador
+      const naves = await juego.obtenerNaves(partidaId, actorId);
+      const upgradables = (naves || []).filter(n => {
+        const lvl = (n.nivel || '').toString().toLowerCase();
+        return lvl === 'basica' || lvl === 'intermedia';
+      });
+      if (!upgradables.length) return alert('No tienes naves mejorables (todas están en nivel máximo o no tienes naves).');
+
+      // si hay varias, pedir elegir por id
+      let selected = null;
+      if (upgradables.length === 1) {
+        selected = upgradables[0];
+      } else {
+        const list = upgradables.map(n => `${n.id}: ${n.nivel}${n.planetaId ? ' (planeta ' + n.planetaId + ')' : ''}`).join('\n');
+        const entrada = window.prompt('Elige el id de la nave a mejorar:\n' + list);
+        if (!entrada) return; // cancel
+        const idSel = Number(entrada.trim());
+        selected = upgradables.find(n => Number(n.id) === idSel);
+        if (!selected) return alert('Id de nave inválido.');
+      }
+
+      const originalNivel = (selected.nivel || '').toString();
+      const turnoId = turno.id || turno._id;
+      if (!turnoId) return alert('Turno inválido (sin id).');
+
+      const payload = { partidaId: Number(partidaId), turnoId: Number(turnoId), actorId: Number(actorId), tipo: 'mejorar_nave', payload: { naveId: Number(selected.id) } };
+      const res = await api.post('/jugadas', payload);
+
+      // leer resultado del servidor
+      const resultado = res?.data?.resultado || res?.data || res;
+      const nuevoNivel = resultado?.nivel || (resultado?.resultado && resultado.resultado.nivel) || null;
+
+      // refrescar naves localmente
+      try {
+        const refreshed = await juego.obtenerNaves(partidaId, actorId);
+        const counts = { basica: 0, intermedia: 0, avanzada: 0 };
+        (refreshed || []).forEach(n => {
+          const lvl = (n.nivel || n.level || '').toString().toLowerCase();
+          if (lvl.includes('bas')) counts.basica += 1;
+          else if (lvl.includes('inter')) counts.intermedia += 1;
+          else if (lvl.includes('avanz') || lvl.includes('avanzada')) counts.avanzada += 1;
+        });
+        setNavesCount(counts);
+      } catch (e) { /* ignore */ }
+
+      alert(`Tu nave ${originalNivel} fue mejorada${nuevoNivel ? ' a ' + nuevoNivel : ''}.`);
+      // refrescar puntajes/turno/recursos
+      try { await cargarPuntajes(); } catch (e) {}
+      try { const turnoNuevo = await juego.obtenerTurnoActivo(partidaId); setTurnoActivo(turnoNuevo); } catch (e) {}
+      try { const id = actorId; const r = await juego.obtenerRecursos(id); setRecursos(r.map || {}); } catch (e) {}
+      return res.data ?? res;
+    } catch (err) {
+      console.error('Error al mejorar nave:', err);
+      if (err?.response) {
+        console.error('Server response data:', err.response.data);
+        const remote = err.response.data?.error || err.response.data;
+        const msg = remote?.message || remote?.code || JSON.stringify(remote) || err.message || 'Error al mejorar nave';
+        if (remote?.detalle) {
+          alert(msg + ': ' + JSON.stringify(remote.detalle));
+        } else {
+          alert(msg);
+        }
+      } else {
+        alert(err.message || 'Error al mejorar nave');
+      }
+    } finally {
+      setImproving(false);
+    }
+  }
+
   return (
     <div className="partida-container">
   {/* Panel izquierdo */}
@@ -452,17 +578,41 @@ export default function Partida() {
         </div>
         {/* debug button removed */}
   <h3>Acciones</h3>
+  {/* Acciones: cambiar apariencia cuando no es tu turno (clase + title) */}
   <button
-    className="accion-btn"
+    className={`accion-btn ${!esMiTurno ? 'accion-btn--blocked' : ''} ${buildingNave ? 'accion-btn--loading' : ''}`}
     onClick={construirNave}
     disabled={!esMiTurno || buildingNave}
+    title={!esMiTurno ? 'No es tu turno' : (buildingNave ? 'Construyendo...' : 'Construir Nave')}
   >
     {buildingNave ? 'Construyendo...' : 'Construir Nave'}
   </button>
-  <button className="accion-btn">Mejorar Nave</button>
-  <button className="accion-btn">Usar Nave</button>
-  <button className="accion-btn">Construir Base</button>
-  <button className="accion-btn">Origen</button>
+  <button
+    className={`accion-btn ${!esMiTurno ? 'accion-btn--blocked' : ''} ${improving ? 'accion-btn--loading' : ''}`}
+    onClick={mejorarNaveHandler}
+    disabled={!esMiTurno || improving}
+    title={!esMiTurno ? 'No es tu turno' : (improving ? 'Mejorando...' : 'Mejorar Nave')}
+  >
+    {improving ? 'Mejorando...' : 'Mejorar Nave'}
+  </button>
+  <button
+    className={`accion-btn ${!esMiTurno ? 'accion-btn--blocked' : ''}`}
+    onClick={() => {}}
+    disabled={!esMiTurno}
+    title={!esMiTurno ? 'No es tu turno' : 'Usar Nave'}
+  >Usar Nave</button>
+  <button
+    className={`accion-btn ${!esMiTurno ? 'accion-btn--blocked' : ''}`}
+    onClick={() => {}}
+    disabled={!esMiTurno}
+    title={!esMiTurno ? 'No es tu turno' : 'Construir Base'}
+  >Construir Base</button>
+  <button
+    className={`accion-btn ${!esMiTurno ? 'accion-btn--blocked' : ''}`}
+    onClick={() => {}}
+    disabled={!esMiTurno}
+    title={!esMiTurno ? 'No es tu turno' : 'Origen'}
+  >Origen</button>
       </div>
 
       {/* Tablero central */}
