@@ -27,6 +27,8 @@ export default function Partida() {
   const [planetas, setPlanetas] = useState([]);
   const [miJugador, setMiJugador] = useState(null);
   const [recursos, setRecursos] = useState({});
+  const [buildingNave, setBuildingNave] = useState(false);
+  const [navesCount, setNavesCount] = useState({ basica: 0, intermedia: 0, avanzada: 0 });
 
 
   useEffect(() => {
@@ -140,6 +142,33 @@ export default function Partida() {
     cargarRecursos();
     return () => (mounted = false);
   }, [miJugador, booting]);
+
+  // Cargar naves del jugador actual y contar por nivel
+  useEffect(() => {
+    if (!miJugador || !partidaId) { setNavesCount({ basica: 0, intermedia: 0, avanzada: 0 }); return; }
+    let mounted = true;
+    async function cargarNaves() {
+      try {
+        const actorId = miJugador.jugadorEnPartidaId || miJugador.id || miJugador.userId || miJugador.usuarioId;
+        if (!actorId) { if (mounted) setNavesCount({ basica: 0, intermedia: 0, avanzada: 0 }); return; }
+        const naves = await juego.obtenerNaves(partidaId, actorId);
+        if (!mounted) return;
+        const counts = { basica: 0, intermedia: 0, avanzada: 0 };
+        (naves || []).forEach(n => {
+          const lvl = (n.nivel || n.level || '').toString().toLowerCase();
+          if (lvl.includes('bas')) counts.basica += 1;
+          else if (lvl.includes('inter')) counts.intermedia += 1;
+          else if (lvl.includes('avanz') || lvl.includes('avanzada')) counts.avanzada += 1;
+        });
+        setNavesCount(counts);
+      } catch (err) {
+        console.error('Error al cargar naves del jugador:', err);
+        if (mounted) setNavesCount({ basica: 0, intermedia: 0, avanzada: 0 });
+      }
+    }
+    cargarNaves();
+    return () => (mounted = false);
+  }, [miJugador, partidaId]);
 
 
   // Función reutilizable para cargar puntajes (se usa desde efectos y tras cambios de turno)
@@ -289,6 +318,75 @@ export default function Partida() {
     }
   }
 
+  async function construirNave() {
+    if (!partidaId) return alert('No se pudo determinar la partida.');
+    if (!miJugador) return alert('No se pudo determinar tu jugador en la partida.');
+
+    // Re-evaluate turno activo from server to avoid stale data
+    try {
+      setBuildingNave(true);
+      const turno = await juego.obtenerTurnoActivo(partidaId);
+      if (!turno) {
+        alert('No hay un turno activo para esta partida.');
+        return;
+      }
+
+      const turnoJugadorId = turno.jugadorEnPartidaId || turno.jugadorId || turno.jugador?.id;
+      const actorId = miJugador.jugadorEnPartidaId || miJugador.id || miJugador.userId || miJugador.usuarioId;
+      if (!actorId) return alert('No se pudo determinar tu id de jugador.');
+
+      if (String(turnoJugadorId) !== String(actorId)) {
+        alert('No es tu turno. Solo puedes construir cuando sea tu turno activo.');
+        return;
+      }
+
+      const turnoId = turno.id || turno._id;
+      if (!turnoId) return alert('Turno inválido (sin id).');
+
+      // Intentar crear la jugada de tipo construir_nave; el backend validará recursos
+      const payload = { partidaId: Number(partidaId), turnoId: Number(turnoId), actorId: Number(actorId), tipo: 'construir_nave', payload: {} };
+      console.debug('Construir nave - payload:', payload);
+      const res = await api.post('/jugadas', payload);
+      // refrescar datos relevantes
+      try { await cargarPuntajes(); } catch (e) { /* no bloquear */ }
+      try { const turnoNuevo = await juego.obtenerTurnoActivo(partidaId); setTurnoActivo(turnoNuevo); } catch (e) { /* ignore */ }
+      try { const id = actorId; const r = await juego.obtenerRecursos(id); setRecursos(r.map || {}); } catch (e) { /* ignore */ }
+      try { const b = await juego.obtenerBases(partidaId); setBases(b || []); } catch (e) { /* ignore */ }
+      try {
+        // actualizar contador de naves inmediatamente
+        const actor = actorId;
+        const naves = await juego.obtenerNaves(partidaId, actor);
+        const counts = { basica: 0, intermedia: 0, avanzada: 0 };
+        (naves || []).forEach(n => {
+          const lvl = (n.nivel || n.level || '').toString().toLowerCase();
+          if (lvl.includes('bas')) counts.basica += 1;
+          else if (lvl.includes('inter')) counts.intermedia += 1;
+          else if (lvl.includes('avanz') || lvl.includes('avanzada')) counts.avanzada += 1;
+        });
+        setNavesCount(counts);
+      } catch (e) { /* ignore naves refresh errors */ }
+
+      alert('Nave construida correctamente.');
+      return res.data ?? res;
+    } catch (err) {
+      console.error('Error al construir nave:', err);
+      if (err?.response) {
+        console.error('Server response data:', err.response.data);
+        const remote = err.response.data?.error || err.response.data;
+        const msg = remote?.message || remote?.code || JSON.stringify(remote) || err.message || 'Error al construir nave';
+        if (remote?.detalle) {
+          alert(msg + ': ' + JSON.stringify(remote.detalle));
+        } else {
+          alert(msg);
+        }
+      } else {
+        alert(err.message || 'Error al construir nave');
+      }
+    } finally {
+      setBuildingNave(false);
+    }
+  }
+
   return (
     <div className="partida-container">
   {/* Panel izquierdo */}
@@ -296,15 +394,15 @@ export default function Partida() {
         <h3>Naves:</h3>
         <div className="control">
         <img src={nave_b} alt="Nave Basica" width={28} height={28} />
-        <span>Naves B: 2</span>
+        <span>Naves Básicas: {navesCount.basica}</span>
         </div>
         <div className="control">
         <img src={nave_i} alt="Nave Intermedia" width={28} height={28} />
-        <span>Naves I: 2</span>
+        <span>Naves Intermedias: {navesCount.intermedia}</span>
         </div>
         <div className="control">
-            <img src={nave_a} alt="Nave Avanzada" width={28} height={28} />
-            <span>Naves A: 1</span>
+          <img src={nave_a} alt="Nave Avanzada" width={28} height={28} />
+          <span>Naves Avanzadas: {navesCount.avanzada}</span>
         </div>
         <h3>Bases</h3>
         <div className="control">
@@ -313,7 +411,13 @@ export default function Partida() {
         </div>
         {/* debug button removed */}
   <h3>Acciones</h3>
-  <button className="accion-btn">Construir Nave</button>
+  <button
+    className="accion-btn"
+    onClick={construirNave}
+    disabled={!esMiTurno || buildingNave}
+  >
+    {buildingNave ? 'Construyendo...' : 'Construir Nave'}
+  </button>
   <button className="accion-btn">Mejorar Nave</button>
   <button className="accion-btn">Usar Nave</button>
   <button className="accion-btn">Construir Base</button>
