@@ -37,6 +37,20 @@ export default function Partida() {
   const prevIsMyTurnRef = useRef(false);
   const initialisedTurnRef = useRef(false);
 
+  // Helper: calcular contadores de naves a partir de una lista (excluye consumidas)
+  function computeNavesCountFromList(list) {
+    const counts = { basica: 0, intermedia: 0, avanzada: 0 };
+    (list || []).forEach(n => {
+      if (!n) return;
+      if ((n.estado || '').toString().toLowerCase() === 'consumida') return;
+      const lvl = (n.nivel || n.level || '').toString().toLowerCase();
+      if (lvl.includes('bas')) counts.basica += 1;
+      else if (lvl.includes('inter')) counts.intermedia += 1;
+      else if (lvl.includes('avanz')) counts.avanzada += 1;
+    });
+    return counts;
+  }
+
   // Función reutilizable para cargar puntajes (se usa desde efectos y tras cambios de turno)
   const cargarPuntajes = useCallback(async () => {
     try {
@@ -107,6 +121,8 @@ export default function Partida() {
             const naves = await juego.obtenerNaves(partidaId, actor);
             const counts = { basica: 0, intermedia: 0, avanzada: 0 };
             (naves || []).forEach((n) => {
+              // excluir naves que ya fueron consumidas (no cuentan como posesión)
+              if ((n.estado || '').toString().toLowerCase() === 'consumida') return;
               const lvl = (n.nivel || n.level || '').toString().toLowerCase();
               if (lvl.includes('bas')) counts.basica += 1;
               else if (lvl.includes('inter')) counts.intermedia += 1;
@@ -151,6 +167,8 @@ export default function Partida() {
         const naves = await juego.obtenerNaves(partidaId, actor);
         const counts = { basica: 0, intermedia: 0, avanzada: 0 };
         (naves || []).forEach(n => {
+          // excluir naves consumidas
+          if ((n.estado || '').toString().toLowerCase() === 'consumida') return;
           const lvl = (n.nivel || n.level || '').toString().toLowerCase();
           if (lvl.includes('bas')) counts.basica += 1;
           else if (lvl.includes('inter')) counts.intermedia += 1;
@@ -336,6 +354,7 @@ export default function Partida() {
         if (!mounted) return;
         const counts = { basica: 0, intermedia: 0, avanzada: 0 };
         (naves || []).forEach(n => {
+          if ((n.estado || '').toString().toLowerCase() === 'consumida') return;
           const lvl = (n.nivel || n.level || '').toString().toLowerCase();
           if (lvl.includes('bas')) counts.basica += 1;
           else if (lvl.includes('inter')) counts.intermedia += 1;
@@ -515,6 +534,18 @@ export default function Partida() {
             console.error('Error formateando resultado del dado:', e);
             alert(`Resultado: ${JSON.stringify(resultado)}`);
           }
+          // Refrescar recursos del jugador inmediatamente tras tirar el dado
+          try {
+            if (miJugador) {
+              const id = miJugador.jugadorEnPartidaId || miJugador.id || miJugador.userId || miJugador.usuarioId;
+              if (id) {
+                const recursosRes = await juego.obtenerRecursos(id);
+                setRecursos(recursosRes.map || {});
+              }
+            }
+          } catch (e) {
+            console.error('Error al refrescar recursos tras tirar dado:', e);
+          }
       }
     } catch (err) {
       console.error('Error al lanzar dado', err);
@@ -593,6 +624,7 @@ export default function Partida() {
         const naves = await juego.obtenerNaves(partidaId, actor);
         const counts = { basica: 0, intermedia: 0, avanzada: 0 };
         (naves || []).forEach(n => {
+          if ((n.estado || '').toString().toLowerCase() === 'consumida') return;
           const lvl = (n.nivel || n.level || '').toString().toLowerCase();
           if (lvl.includes('bas')) counts.basica += 1;
           else if (lvl.includes('inter')) counts.intermedia += 1;
@@ -637,6 +669,8 @@ export default function Partida() {
       // obtener naves del jugador
       const naves = await juego.obtenerNaves(partidaId, actorId);
       const upgradables = (naves || []).filter(n => {
+        const estado = (n.estado || '').toString().toLowerCase();
+        if (estado === 'consumida' || estado === 'usada') return false;
         const lvl = (n.nivel || '').toString().toLowerCase();
         return lvl === 'basica' || lvl === 'intermedia';
       });
@@ -671,6 +705,7 @@ export default function Partida() {
         const refreshed = await juego.obtenerNaves(partidaId, actorId);
         const counts = { basica: 0, intermedia: 0, avanzada: 0 };
         (refreshed || []).forEach((n) => {
+          if ((n.estado || '').toString().toLowerCase() === 'consumida') return;
           const lvl = (n.nivel || n.level || '').toString().toLowerCase();
           if (lvl.includes('bas')) counts.basica += 1;
           else if (lvl.includes('inter')) counts.intermedia += 1;
@@ -850,14 +885,46 @@ export default function Partida() {
       if (!turnoId) return alert('Turno inválido (sin id).');
 
       const payload = { partidaId: Number(partidaId), turnoId: Number(turnoId), actorId: Number(actorId), tipo: 'usar_nave', payload: { naveId: Number(selectedShipForUse.id), destinoPlanetaId: Number(planeta.id) } };
-      const res = await api.post('/jugadas', payload);
+
+      // Optimistic update: marcar la nave como consumida localmente y actualizar contadores inmediatamente
+      try {
+        const updatedLocal = (naves || []).map(n => (n && Number(n.id) === Number(selectedShipForUse.id)) ? { ...n, estado: 'consumida', planetaId: Number(planeta.id) } : n);
+        setNaves(updatedLocal);
+        setNavesCount(computeNavesCountFromList(updatedLocal));
+      } catch (e) {
+        // ignore optimistic update errors
+      }
+
+      let res;
+      try {
+        res = await api.post('/jugadas', payload);
+      } catch (apiErr) {
+        // rollback: re-sincronizar el listado desde servidor si la petición falla
+        try {
+          const refreshed = await juego.obtenerNaves(partidaId, actorId);
+          setNaves(refreshed || []);
+          setNavesCount(computeNavesCountFromList(refreshed || []));
+        } catch (rerr) { console.error('Error resynchronizing naves after failed usar_nave:', rerr); }
+        throw apiErr;
+      }
 
       // refrescar estado relevante
       try { await cargarPuntajes(); } catch (e) {}
       try { const turnoNuevo = await juego.obtenerTurnoActivo(partidaId); setTurnoActivo(turnoNuevo); } catch (e) {}
       try { const id = actorId; const r = await juego.obtenerRecursos(id); setRecursos(r.map || {}); } catch (e) {}
       try { const b = await juego.obtenerBases(partidaId); setBases(b || []); } catch (e) {}
-      try { const refreshed = await juego.obtenerNaves(partidaId, actorId); const counts = { basica:0, intermedia:0, avanzada:0 }; (refreshed||[]).forEach(n=>{const lvl=(n.nivel||'').toString().toLowerCase(); if(lvl.includes('bas')) counts.basica+=1; else if(lvl.includes('inter')) counts.intermedia+=1; else if(lvl.includes('avanz')) counts.avanzada+=1;}); setNavesCount(counts); } catch (e) {}
+      try {
+        const refreshed = await juego.obtenerNaves(partidaId, actorId);
+        const counts = { basica:0, intermedia:0, avanzada:0 };
+        (refreshed||[]).forEach(n=>{
+          if ((n.estado || '').toString().toLowerCase() === 'consumida') return;
+          const lvl=(n.nivel||'').toString().toLowerCase();
+          if(lvl.includes('bas')) counts.basica+=1;
+          else if(lvl.includes('inter')) counts.intermedia+=1;
+          else if(lvl.includes('avanz')) counts.avanzada+=1;
+        });
+        setNavesCount(counts);
+      } catch (e) {}
 
       const resultado = res?.data?.resultado || res?.data || res;
       alert('Nave usada correctamente.' + (resultado && resultado.mensaje ? '\n' + resultado.mensaje : ''));
