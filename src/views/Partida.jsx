@@ -2,6 +2,7 @@ import Mapa from "./Mapa";
 import { useState, useEffect, useRef } from 'react';
 import { useParams } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
+import socketService from '../services/socket';
 import "../assets/styles/Partida.css";
 import img_especia from "../assets/img/especia.png";
 import img_metal from "../assets/img/metal.png";
@@ -53,6 +54,106 @@ export default function Partida() {
 
     cargarJugadoresYMiJugador();
   }, [partidaId, user]);
+
+
+  // SOCKETS: unir a la sala de la partida, escuchar eventos y actualizar estado
+  useEffect(() => {
+    if (!partidaId || !user?.id) return;
+    if (booting) return;
+
+    // inicializar socket y unirse a la partida
+    try {
+      socketService.init();
+      socketService.joinPartida(partidaId);
+    } catch (e) { console.error('Socket init/join error', e); }
+
+    // Handlers
+    const onJugadaCreada = async (payload) => {
+      try {
+        const pid = payload?.partidaId || payload?.partida?.id || payload?.partida;
+        if (pid && String(pid) !== String(partidaId)) return;
+        // refrescar puntajes y turno
+        try { await cargarPuntajes(); } catch (e) { /* ignore */ }
+        try { const turno = await juego.obtenerTurnoActivo(partidaId); setTurnoActivo(turno); } catch (e) { /* ignore */ }
+        // refrescar recursos y bases y naves para mi jugador
+        try { if (miJugador) { const id = miJugador.jugadorEnPartidaId || miJugador.id || miJugador.userId || miJugador.usuarioId; const r = await juego.obtenerRecursos(id); setRecursos(r.map || {}); } } catch (e) {}
+        try { const b = await juego.obtenerBases(partidaId); setBases(b || []); } catch (e) {}
+        try { if (miJugador) { const actor = miJugador.jugadorEnPartidaId || miJugador.id || miJugador.userId || miJugador.usuarioId; const naves = await juego.obtenerNaves(partidaId, actor); const counts = { basica: 0, intermedia: 0, avanzada: 0 }; (naves||[]).forEach(n => { const lvl = (n.nivel||n.level||'').toString().toLowerCase(); if (lvl.includes('bas')) counts.basica += 1; else if (lvl.includes('inter')) counts.intermedia += 1; else if (lvl.includes('avanz')) counts.avanzada += 1; }); setNavesCount(counts); } } catch (e) {}
+      } catch (e) { console.error('Error manejando jugada:creada', e); }
+    };
+
+    const onBaseCreada = (payload) => {
+      const base = payload?.base || payload;
+      if (!base) return;
+      if (String(base.partidaId || base.partida || partidaId) !== String(partidaId)) {
+        // no es para esta partida
+      }
+      setBases(prev => {
+        const exists = prev.some(b => String(b.id || b._id) === String(base.id || base._id));
+        if (exists) return prev;
+        return [base, ...prev];
+      });
+    };
+
+    const onBaseActualizada = (payload) => {
+      const base = payload?.base || payload;
+      if (!base) return;
+      setBases(prev => prev.map(b => (String(b.id || b._id) === String(base.id || base._id) ? { ...b, ...base } : b)));
+    };
+
+    const onBaseEliminada = (payload) => {
+      const id = payload?.id || payload?.baseId || payload;
+      if (!id) return;
+      setBases(prev => prev.filter(b => String(b.id || b._id) !== String(id)));
+    };
+
+    const onNaveEvent = async (payload) => {
+      // para simplicidad actualizamos contador de naves del jugador
+      try {
+        if (!miJugador) return;
+        const actor = miJugador.jugadorEnPartidaId || miJugador.id || miJugador.userId || miJugador.usuarioId;
+        const naves = await juego.obtenerNaves(partidaId, actor);
+        const counts = { basica: 0, intermedia: 0, avanzada: 0 };
+        (naves || []).forEach(n => {
+          const lvl = (n.nivel || n.level || '').toString().toLowerCase();
+          if (lvl.includes('bas')) counts.basica += 1;
+          else if (lvl.includes('inter')) counts.intermedia += 1;
+          else if (lvl.includes('avanz')) counts.avanzada += 1;
+        });
+        setNavesCount(counts);
+      } catch (e) { console.error('Error actualizando naves tras evento', e); }
+    };
+
+    const onTurnoActualizado = (payload) => {
+      const pid = payload?.partidaId || payload?.partida?.id || payload?.partida || partidaId;
+      if (String(pid) !== String(partidaId)) return;
+      if (payload && typeof payload === 'object') {
+        setTurnoActivo(payload);
+      } else {
+        juego.obtenerTurnoActivo(partidaId).then(t => setTurnoActivo(t)).catch(() => {});
+      }
+    };
+
+    // Register listeners
+    const offs = [];
+    try {
+      offs.push(socketService.on('jugada:creada', onJugadaCreada));
+      offs.push(socketService.on('base:creada', onBaseCreada));
+      offs.push(socketService.on('base:actualizada', onBaseActualizada));
+      offs.push(socketService.on('base:eliminada', onBaseEliminada));
+      offs.push(socketService.on('nave:creada', onNaveEvent));
+      offs.push(socketService.on('nave:actualizada', onNaveEvent));
+      offs.push(socketService.on('nave:mejorada', onNaveEvent));
+      offs.push(socketService.on('nave:movida', onNaveEvent));
+      offs.push(socketService.on('turno:actualizado', onTurnoActualizado));
+    } catch (e) { console.error('Error registrando listeners', e); }
+
+    return () => {
+      // cleanup listeners and leave partida
+      try { socketService.leavePartida(partidaId); } catch (e) { void e; }
+      try { offs.forEach(fn => { if (typeof fn === 'function') fn(); }); } catch (e) { void e; }
+    };
+  }, [partidaId, user, booting, miJugador]);
 
 
   // Cargar bases asociadas a la partida (para mostrar bases en el mapa)
