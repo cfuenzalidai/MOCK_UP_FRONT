@@ -373,15 +373,7 @@ export default function Partida() {
   }, [partidaId]);
 
 
-  // Función reutilizable para cargar puntajes (se usa desde efectos y tras cambios de turno)
-  async function cargarPuntajes() {
-    try {
-      const data = await juego.obtenerPuntajes(partidaId);
-      setPuntajes(data);
-    } catch (err) {
-      console.error("Error al cargar puntajes:", err);
-    }
-  }
+  // (cargarPuntajes está declarado arriba con useCallback)
 
   // Cargar puntajes cuando tengamos partidaId y bootstrap de auth finalizado
   useEffect(() => {
