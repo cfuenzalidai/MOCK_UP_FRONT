@@ -1,10 +1,10 @@
-import React, { useState } from 'react';
+import { useState } from 'react';
 import Territorio from '../components/Territorio';
-import "../assets/styles/Mapa.css";
+import '../assets/styles/Mapa.css';
 
 export default function Mapa({ bases = [], jugadores = [], planetas = [] }) {
   const cell = 80; 
-  const [territorios, setTerritorios] = useState(() => {
+  const [territorios, _setTerritorios] = useState(() => {
     const arr = [];
     let id = 1;
 
@@ -20,11 +20,11 @@ export default function Mapa({ bases = [], jugadores = [], planetas = [] }) {
 
   function mulberry32(a) {
     return function() {
-      var t = a += 0x6D2B79F5;
+      let t = a += 0x6D2B79F5;
       t = Math.imul(t ^ t >>> 15, t | 1);
       t ^= t + Math.imul(t ^ t >>> 7, t | 61);
       return ((t ^ t >>> 14) >>> 0) / 4294967296;
-    }
+    };
   }
   function seededShuffle(array, seedStr = 'map-seed-v1'){
     // simple hash to uint32 from seedStr
@@ -46,13 +46,13 @@ export default function Mapa({ bases = [], jugadores = [], planetas = [] }) {
     especia: '#ef4444', // rojo
     liebre: '#edd3b0',  // beige
     metal: '#c6c5c5ff',   // negro
-    agua: '#60a5fa'     // celeste
+    agua: '#60a5fa',     // celeste
   };
   const pool = seededShuffle([
     COLOR.especia, COLOR.especia, COLOR.especia,
     COLOR.metal, COLOR.metal, COLOR.metal,
     COLOR.liebre, COLOR.liebre, COLOR.liebre,
-    COLOR.agua, COLOR.agua, COLOR.agua
+    COLOR.agua, COLOR.agua, COLOR.agua,
   ], '111122');
   const assignment = {};
   targetLabels.forEach((lab, i) => { assignment[lab] = pool[i]; });
@@ -80,12 +80,12 @@ export default function Mapa({ bases = [], jugadores = [], planetas = [] }) {
         ? [
             [x, y + cell * 0.866],
             [x + cell / 2, y],
-            [x + cell, y + cell * 0.866]
+            [x + cell, y + cell * 0.866],
           ]
         : [
             [x, y],
             [x + cell / 2, y + cell * 0.866],
-            [x + cell, y]
+            [x + cell, y],
           ];
       // actualizar bounding box
       pts.forEach(p => {
@@ -110,7 +110,7 @@ export default function Mapa({ bases = [], jugadores = [], planetas = [] }) {
         ? bases.find(b =>
             String(b.planetaId) === String(t.id) ||
             String(b.planetaId) === String(t.label) ||
-            String(b.planetaId) === String(t.label.replace(/^T/, ''))
+            String(b.planetaId) === String(t.label.replace(/^T/, '')),
           )
         : null;
       const hasBase = Boolean(baseMatch);
@@ -123,10 +123,10 @@ export default function Mapa({ bases = [], jugadores = [], planetas = [] }) {
           String(p.jugadorEnPartidaId) === String(baseMatch.jugadorEnPartidaId) ||
           String(p.id) === String(baseMatch.jugadorId) ||
           String(p.usuarioId) === String(baseMatch.jugadorId) ||
-          String(p.userId) === String(baseMatch.jugadorId)
+          String(p.userId) === String(baseMatch.jugadorId),
         );
         baseOwnerLabel = match?.Usuario?.nombre || match?.usuario?.nombre || match?.nombre || match?.name || null;
-        if (baseOwnerLabel && baseOwnerLabel.length > 14) baseOwnerLabel = baseOwnerLabel.slice(0, 14) + '…';
+        if (baseOwnerLabel && baseOwnerLabel.length > 14) baseOwnerLabel = `${baseOwnerLabel.slice(0, 14)  }…`;
       }
 
       // derive esOrigen from `planetas` prop if available (planet objects have esOrigen)
@@ -161,20 +161,43 @@ export default function Mapa({ bases = [], jugadores = [], planetas = [] }) {
             String(p.id) === String(ownerKey) ||
             String(p.jugadorEnPartidaId) === String(ownerKey) ||
             String(p.usuarioId) === String(ownerKey) ||
-            String(p.userId) === String(ownerKey)
+            String(p.userId) === String(ownerKey),
           );
           originOwnerLabel = matchP?.Usuario?.nombre || matchP?.usuario?.nombre || matchP?.nombre || matchP?.name || null;
-          if (originOwnerLabel && originOwnerLabel.length > 14) originOwnerLabel = originOwnerLabel.slice(0, 14) + '…';
+          if (originOwnerLabel && originOwnerLabel.length > 14) originOwnerLabel = `${originOwnerLabel.slice(0, 14)  }…`;
         }
       }
 
       // derive casaId from jugadores list if possible
       let casaId = null;
       if (baseMatch) {
-        const player = Array.isArray(jugadores) ? jugadores.find(p => String(p.id) === String(baseMatch.jugadorId) || String(p.id) === String(baseMatch.userId) || String(p.usuarioId) === String(baseMatch.jugadorId) || String(p.usuarioId) === String(baseMatch.userId) || String(p.jugadorEnPartidaId) === String(baseMatch.jugadorEnPartidaId)) : null;
+        const player = Array.isArray(jugadores)
+          ? jugadores.find((p) =>
+              String(p.id) === String(baseMatch.jugadorId) ||
+              String(p.id) === String(baseMatch.userId) ||
+              String(p.usuarioId) === String(baseMatch.jugadorId) ||
+              String(p.usuarioId) === String(baseMatch.userId) ||
+              String(p.jugadorEnPartidaId) === String(baseMatch.jugadorEnPartidaId),
+            )
+          : null;
         casaId = player?.casa || baseMatch?.casa || null;
       }
-      geometries.push({ ...t, pts, pointsStr, cx, cy, resourceColor, hasBase, base: baseMatch, casaId, esOrigen, originOwnerLabel, baseOwnerLabel, up });
+      const geo = {
+        ...t,
+        pts,
+        pointsStr,
+        cx,
+        cy,
+        resourceColor,
+        hasBase,
+        base: baseMatch,
+        casaId,
+        esOrigen,
+        originOwnerLabel,
+        baseOwnerLabel,
+        up,
+      };
+      geometries.push(geo);
     }
   }
 
@@ -270,8 +293,8 @@ export default function Mapa({ bases = [], jugadores = [], planetas = [] }) {
             <line key={i} x1={e.a[0]} y1={e.a[1]} x2={e.b[0]} y2={e.b[1]} />
           ))}
         </g>
-        {selectedId != null && (() => {
-          const sel = geometries.find(g => g.id === selectedId);
+        {selectedId !== null && (() => {
+          const sel = geometries.find((g) => g.id === selectedId);
           if (!sel) return null;
           return (
             <polygon
@@ -290,7 +313,7 @@ export default function Mapa({ bases = [], jugadores = [], planetas = [] }) {
   );
 }
 
-function getRandomOwnerColor() {
+function _getRandomOwnerColor() {
   const colors = ['#f97316', '#60a5fa', '#34d399', '#f472b6', '#a78bfa', '#facc15'];
   return colors[Math.floor(Math.random() * colors.length)];
 }

@@ -21,7 +21,7 @@ api.interceptors.request.use((cfg) => {
 // 401 → logout (salvo si el request manda 'X-Suppress-Logout: 1')
 api.interceptors.response.use(
   (r) => r,
-  (err) => Promise.reject(err) 
+  (err) => Promise.reject(err),
 );
 
 export default api;

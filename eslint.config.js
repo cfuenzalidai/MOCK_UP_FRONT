@@ -51,8 +51,21 @@ export default [
         ignoreUrls: true,
         ignoreStrings: true,
         ignoreTemplateLiterals: true,
-        ignoreComments: false
+        ignoreComments: false,
       }],
+
+      // Airbnb-like style enforcements (camelCase, prefer-const, no-var, etc.)
+      'camelcase': ['error', { properties: 'always', ignoreDestructuring: false }],
+      'prefer-const': 'error',
+      'no-var': 'error',
+      'eqeqeq': ['error', 'always'],
+      'prefer-template': 'error',
+      'arrow-body-style': ['error', 'as-needed'],
+      'comma-dangle': ['error', 'always-multiline'],
+      'quotes': ['error', 'single', { avoidEscape: true, allowTemplateLiterals: true }],
+      'semi': ['error', 'always'],
+      'no-console': ['warn', { allow: ['warn', 'error', 'info'] }],
+
 
     },
   },

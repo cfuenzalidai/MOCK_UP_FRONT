@@ -58,7 +58,7 @@ export default function CreatePartida() {
         throw new Error(txt || `HTTP ${res.status}`);
       }
       const data = await res.json(); // devuelve { partida: { id, ... }, ... }
-      console.debug('CreatePartida response:', data);
+      console.info('CreatePartida response:', data);
       const id = data?.partida?.id ?? data?.id ?? data?.partidaId ?? data?.partida?.partidaId ?? null;
       if (id) {
         navigate(`/partidas/${id}/lobby`);
