@@ -93,7 +93,7 @@ export default function PartidasPublicas() {
           const r = await api.get('/jugadoresenpartidas', { params: { usuarioId: user?.id } });
           const d = r?.data || [];
           setJoinedSet(new Set(d.map((j) => String(j.partidaId))));
-        } catch (e) { /* non-critical */ }
+        } catch { /* non-critical */ }
         navigate(`/partidas/${targetId}/lobby`);
         return;
       } catch (err) {
@@ -126,7 +126,7 @@ export default function PartidasPublicas() {
         <ul className="board-list">
           {rows.map((p) => {
             const full = p.jugadores >= p.max;
-            const pid = p.id != null ? String(p.id) : '';
+            const pid = (p.id !== null && p.id !== undefined) ? String(p.id) : '';
             const isMember = joinedSet.has(pid);
             return (
               <li key={p.id} className="board-row">

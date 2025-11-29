@@ -12,10 +12,25 @@ import nave_i from "../assets/img/nave_i.png";
 import nave_a from "../assets/img/nave_a.png";
 
 export default function Territorio({
-  id, points, fill = 'transparent', label, onClick, ownerColor, hasBase, base = null,
-  cx, cy, resourceColor, showLabel = false, casaId = null, esOrigen = null, pointingUp = true,
-  baseOwnerLabel = null, originOwnerLabel = null,
-  ships = [], selectingDestino = false
+  id, 
+  points, 
+  fill = 'transparent', 
+  label, 
+  onClick, 
+  ownerColor, 
+  hasBase, 
+  base = null,
+  cx, 
+  cy, 
+  resourceColor, 
+  showLabel = false, 
+  casaId = null, 
+  esOrigen = null, 
+  pointingUp = true,
+  baseOwnerLabel = null, 
+  originOwnerLabel = null,
+  ships = [], 
+  selectingDestino = false
 }) {
   // points: string "x1,y1 x2,y2 x3,y3"
   // Priority: ownerColor (player) > resourceColor (tile) > default fill
@@ -35,7 +50,7 @@ export default function Territorio({
   const style = { cursor: selectingDestino ? 'crosshair' : (onClick ? 'pointer' : 'default') };
 
   return (
-    <g className={className} data-id={id} onClick={() => onClick && onClick(id)} style={style}>
+    <g className={`territorio${onClick ? ' clickable' : ''}`} data-id={id} onClick={() => onClick && onClick(id)}>
       {/* polygon with no stroke; borders are drawn globally to avoid double-stroke gaps */}
       <polygon points={points} fill={displayFill} stroke="none" fillOpacity={1} />
       
@@ -76,7 +91,7 @@ export default function Territorio({
           3: logoAndroid,
           4: logoAmmonite,
           5: logoAlien,
-          6: logoAnimal
+          6: logoAnimal,
         };
 
         const size = 20;
@@ -94,10 +109,10 @@ export default function Territorio({
                   base && base.esOrigen,
                   p && (p.esOrigen || p.isOrigin || p.isOrigen || p.es_origen || p.is_origin),
                   base && base.planeta_esOrigen,
-                  base && base.planetaEsOrigen
+                  base && base.planetaEsOrigen,
                 ];
                 return candidates.some(v => v === true || v === 'true');
-              } catch (e) { return false; }
+              } catch { return false; }
             })();
 
             const iconSize = 12;
@@ -134,7 +149,11 @@ export default function Territorio({
         // Fallback detection: try to infer a logo from the `base` object, but only render if we can map to one of the known logos.
         let logo = null;
         try {
-          const key = (base && (base.casa || base.house || base.houseKey || base.logo || base.owner || base.jugadorId || base.userId || base.ownerId)) || null;
+          const key = (
+            base && (
+              base.casa || base.house || base.houseKey || base.logo || base.owner || base.jugadorId || base.userId || base.ownerId
+            )
+          ) || null;
           if (typeof key === 'string') {
             const k = key.toLowerCase();
             if (k.includes('hawk')) logo = logoHawk;
@@ -145,15 +164,17 @@ export default function Territorio({
             else if (k.includes('animal')) logo = logoAnimal;
           }
 
-          if (!logo && key != null) {
+          if (!logo && (key !== null && key !== undefined)) {
             const s = String(key);
             let h = 0;
-            for (let i = 0; i < s.length; i++) h = (h * 31 + s.charCodeAt(i)) >>> 0;
+            for (let i = 0; i < s.length; i++) {
+              h = (h * 31 + s.charCodeAt(i)) >>> 0;
+            }
             const arr = [logoHawk, logoAngel, logoAndroid, logoAmmonite, logoAlien, logoAnimal];
             logo = arr[h % arr.length];
           }
-        } catch (e) {
-          console.warn('Error al determinar logo de base', e);
+        } catch (err) {
+          console.warn('Error al determinar logo de base', err);
         }
 
         if (logo) {
@@ -166,10 +187,10 @@ export default function Territorio({
                 base && base.esOrigen,
                 p && (p.esOrigen || p.isOrigin || p.isOrigen || p.es_origen || p.is_origin),
                 base && base.planeta_esOrigen,
-                base && base.planetaEsOrigen
+                base && base.planetaEsOrigen,
               ];
               return candidates.some(v => v === true || v === 'true');
-            } catch (e) { return false; }
+            } catch { return false; }
           })();
 
           const iconSize = 12;
@@ -184,10 +205,10 @@ export default function Territorio({
                 <text
                   x={cx}
                   y={logoY + size + 12}
-                  textAnchor="middle"
+                  textAnchor='middle'
                   fontSize={10}
-                  fill="#ffffff"
-                  pointerEvents="none"
+                  fill='#ffffff'
+                  pointerEvents='none'
                   style={{ fontWeight: 700 }}
                 >
                   {baseOwnerLabel}
