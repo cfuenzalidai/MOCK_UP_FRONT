@@ -15,6 +15,7 @@ import api from '../services/api';
 import * as juego from '../services/juego';
 
 export default function Partida() {
+  const [naves, setNaves] = useState([]);
   const [tirando, setTirando] = useState(false);
   const { user, booting } = useAuth();
   const { partidaId } = useParams();
@@ -29,6 +30,9 @@ export default function Partida() {
   const [buildingNave, setBuildingNave] = useState(false);
   const [navesCount, setNavesCount] = useState({ basica: 0, intermedia: 0, avanzada: 0 });
   const [improving, setImproving] = useState(false);
+  const [usingNave, setUsingNave] = useState(false);
+  const [selectedShipForUse, setSelectedShipForUse] = useState(null);
+  const [selectingDestino, setSelectingDestino] = useState(false);
   const prevIsMyTurnRef = useRef(false);
   const initialisedTurnRef = useRef(false);
 
@@ -213,6 +217,27 @@ export default function Partida() {
     cargarNaves();
     return () => (mounted = false);
   }, [miJugador, partidaId]);
+
+
+  // Cargar todas las naves de la partida (para mostrar en el mapa)
+  useEffect(() => {
+    if (!partidaId) { setNaves([]); return; }
+    let mounted = true;
+    async function cargarTodasNaves() {
+      try {
+        const todas = await juego.obtenerNaves(partidaId);
+        if (!mounted) return;
+        setNaves(todas || []);
+      } catch (err) {
+        console.error('Error al cargar naves de la partida:', err);
+        if (mounted) setNaves([]);
+      }
+    }
+    cargarTodasNaves();
+    // refrescar cada 4s para mantener mapa actualizado
+    const iv = setInterval(() => { if (partidaId) cargarTodasNaves(); }, 4000);
+    return () => { mounted = false; clearInterval(iv); };
+  }, [partidaId]);
 
 
   // Función reutilizable para cargar puntajes (se usa desde efectos y tras cambios de turno)
@@ -554,6 +579,181 @@ export default function Partida() {
     }
   }
 
+  async function usarNaveHandler() {
+    if (!partidaId) return alert('No se pudo determinar la partida.');
+    if (!miJugador) return alert('No se pudo determinar tu jugador en la partida.');
+    try {
+      setUsingNave(true);
+      const turno = await juego.obtenerTurnoActivo(partidaId);
+      if (!turno) return alert('No hay un turno activo para esta partida.');
+      const actorId = miJugador.jugadorEnPartidaId || miJugador.id || miJugador.userId || miJugador.usuarioId;
+      const turnoJugadorId = turno.jugadorEnPartidaId || turno.jugadorId || turno.jugador?.id;
+      if (!actorId) return alert('No se pudo determinar tu id de jugador.');
+      if (String(turnoJugadorId) !== String(actorId)) return alert('No es tu turno. Solo puedes usar una nave cuando sea tu turno activo.');
+
+      // obtener naves disponibles (no usadas/consumidas) del jugador
+      const naves = await juego.obtenerNaves(partidaId, actorId);
+      const disponibles = (naves || []).filter(n => n.estado !== 'usada' && n.estado !== 'consumida');
+      if (!disponibles.length) return alert('No tienes naves disponibles para usar.');
+
+      // si hay varias, pedir seleccionar por id (mejor reemplazar luego por modal)
+      let selected = null;
+      if (disponibles.length === 1) selected = disponibles[0];
+      else {
+        const list = disponibles.map(n => `${n.id}: ${n.nivel}`).join('\n');
+        const entrada = window.prompt('Elige el id de la nave a usar:\n' + list);
+        if (!entrada) return; // cancel
+        const idSel = Number(entrada.trim());
+        selected = disponibles.find(n => Number(n.id) === idSel);
+        if (!selected) return alert('Id de nave inválido.');
+      }
+
+      // Sugerir destino: filtrar planetas alcanzables según nivel de la nave y sin bases
+      const planetasAll = await juego.obtenerPlanetas(partidaId);
+      // obtener mapaId desde los planetas (si existen)
+      const mapaId = (planetasAll && planetasAll.length > 0) ? (planetasAll[0].mapaId || planetasAll[0].MapaId || null) : null;
+
+      let reachablePlanets = [];
+
+      // niveles y alcance
+      const nivel = (selected.nivel || '').toString().toLowerCase();
+      const maxSaltos = nivel.includes('avanz') ? Infinity : (nivel.includes('inter') ? 2 : 1);
+
+      if (!selected.planetaId) return alert('La nave no tiene planeta de origen asignado.');
+      const origenId = Number(selected.planetaId);
+
+      if (maxSaltos === Infinity) {
+        // avanzado: puede viajar a cualquier planeta que no tenga base
+        reachablePlanets = (planetasAll || []).filter(p => !bases.some(b => Number(b.planetaId) === Number(p.id)));
+      } else {
+        // básico/intermedio: necesitamos la lista de vecinos para calcular distancias
+        if (!mapaId) {
+          // si no tenemos mapaId, fallback a listar todos y confiar en backend
+          reachablePlanets = (planetasAll || []).filter(p => !bases.some(b => Number(b.planetaId) === Number(p.id)));
+        } else {
+          // obtener aristas de vecinos para el mapa
+          const pvRes = await api.get(`/planetasvecinos?mapaId=${encodeURIComponent(mapaId)}`);
+          const pvRows = pvRes?.data || [];
+          const adj = new Map();
+          for (const r of pvRows) {
+            const a = Number(r.planetaId ?? r.planeta?.id ?? r.planetaId);
+            const b = Number(r.vecinoId ?? r.vecino?.id ?? r.vecinoId);
+            if (!Number.isInteger(a) || !Number.isInteger(b)) continue;
+            if (!adj.has(a)) adj.set(a, new Set());
+            if (!adj.has(b)) adj.set(b, new Set());
+            adj.get(a).add(b);
+            adj.get(b).add(a); // tratamos como no dirigido para robustez
+          }
+
+          // BFS limitado a maxSaltos
+          const q = [origenId];
+          const dist = new Map();
+          dist.set(origenId, 0);
+          while (q.length) {
+            const u = q.shift();
+            const d = dist.get(u);
+            if (d >= maxSaltos) continue;
+            const neighbors = Array.from(adj.get(u) || []);
+            for (const v of neighbors) {
+              if (!dist.has(v)) {
+                dist.set(v, d + 1);
+                q.push(v);
+              }
+            }
+          }
+
+          reachablePlanets = (planetasAll || []).filter(p => {
+            const pid = Number(p.id);
+            if (pid === origenId) return false; // no viajar al mismo
+            if (bases.some(b => Number(b.planetaId) === pid)) return false; // excluir conquistados
+            const d = dist.get(pid);
+            return typeof d === 'number' && d <= maxSaltos;
+          });
+        }
+      }
+
+      if (!reachablePlanets.length) return alert('No hay planetas válidos alcanzables desde tu origen según el nivel de la nave.');
+
+      // Activar modo de selección en el mapa: el usuario debe clickear la casilla destino
+      setSelectedShipForUse(selected);
+      setSelectingDestino(true);
+      alert('Selecciona el planeta');
+      // la acción real se ejecuta cuando el usuario cliquea la casilla (handleTerritorioSeleccionado)
+      return null;
+    } catch (err) {
+      console.error('Error al usar nave:', err);
+      if (err?.response) {
+        console.error('Server response data:', err.response.data);
+        const remote = err.response.data?.error || err.response.data;
+        const msg = remote?.message || remote?.code || JSON.stringify(remote) || err.message || 'Error al usar nave';
+        if (remote?.detalle) alert(msg + ': ' + JSON.stringify(remote.detalle)); else alert(msg);
+      } else {
+        alert(err.message || 'Error al usar nave');
+      }
+    } finally {
+      // no forzar setUsingNave(false) aquí: lo controlamos durante la selección/ejecución
+    }
+  }
+
+  // Handler que se invoca desde el mapa cuando el usuario hace click en una casilla
+  async function handleTerritorioSeleccionado(territoryIndex, geometry) {
+    if (!selectingDestino || !selectedShipForUse) return;
+    try {
+      setUsingNave(true);
+      // buscar planeta correspondiente al territoryIndex
+      let planeta = (planetas || []).find(p => p.idxTablero !== undefined && p.idxTablero !== null && Number(p.idxTablero) === Number(territoryIndex));
+      // fallback: intentar emparejar por id o label usando la geometría provista
+      if (!planeta && geometry) {
+        const geomId = geometry.id;
+        const geomLabel = geometry.label;
+        planeta = (planetas || []).find(p => String(p.id) === String(geomId) || String(p.id) === String(geomLabel) || String(p.planetaId) === String(geomId) || String(p.idxTablero) === String(geomLabel));
+      }
+      if (!planeta) {
+        alert('La casilla seleccionada no corresponde a un planeta válido. Elige otra.');
+        return;
+      }
+
+      // validar que el planeta esté alcanzable (opcional: confiamos en backend de momento)
+      const turno = await juego.obtenerTurnoActivo(partidaId);
+      if (!turno) return alert('No hay un turno activo para esta partida.');
+      const actorId = miJugador.jugadorEnPartidaId || miJugador.id || miJugador.userId || miJugador.usuarioId;
+      const turnoJugadorId = turno.jugadorEnPartidaId || turno.jugadorId || turno.jugador?.id;
+      if (!actorId) return alert('No se pudo determinar tu id de jugador.');
+      if (String(turnoJugadorId) !== String(actorId)) return alert('No es tu turno.');
+
+      const turnoId = turno.id || turno._id;
+      if (!turnoId) return alert('Turno inválido (sin id).');
+
+      const payload = { partidaId: Number(partidaId), turnoId: Number(turnoId), actorId: Number(actorId), tipo: 'usar_nave', payload: { naveId: Number(selectedShipForUse.id), destinoPlanetaId: Number(planeta.id) } };
+      const res = await api.post('/jugadas', payload);
+
+      // refrescar estado relevante
+      try { await cargarPuntajes(); } catch (e) {}
+      try { const turnoNuevo = await juego.obtenerTurnoActivo(partidaId); setTurnoActivo(turnoNuevo); } catch (e) {}
+      try { const id = actorId; const r = await juego.obtenerRecursos(id); setRecursos(r.map || {}); } catch (e) {}
+      try { const b = await juego.obtenerBases(partidaId); setBases(b || []); } catch (e) {}
+      try { const refreshed = await juego.obtenerNaves(partidaId, actorId); const counts = { basica:0, intermedia:0, avanzada:0 }; (refreshed||[]).forEach(n=>{const lvl=(n.nivel||'').toString().toLowerCase(); if(lvl.includes('bas')) counts.basica+=1; else if(lvl.includes('inter')) counts.intermedia+=1; else if(lvl.includes('avanz')) counts.avanzada+=1;}); setNavesCount(counts); } catch (e) {}
+
+      const resultado = res?.data?.resultado || res?.data || res;
+      alert('Nave usada correctamente.' + (resultado && resultado.mensaje ? '\n' + resultado.mensaje : ''));
+      return res.data ?? res;
+    } catch (err) {
+      console.error('Error al usar nave desde selección en mapa:', err);
+      if (err?.response) {
+        console.error('Server response data:', err.response.data);
+        const remote = err.response.data?.error || err.response.data;
+        const msg = remote?.message || remote?.code || JSON.stringify(remote) || err.message || 'Error al usar nave';
+        if (remote?.detalle) alert(msg + ': ' + JSON.stringify(remote.detalle)); else alert(msg);
+      } else {
+        alert(err.message || 'Error al usar nave');
+      }
+    } finally {
+      setUsingNave(false);
+      setSelectedShipForUse(null);
+      setSelectingDestino(false);
+    }
+  }
+
   return (
     <div className="partida-container">
   {/* Panel izquierdo */}
@@ -596,11 +796,17 @@ export default function Partida() {
     {improving ? 'Mejorando...' : 'Mejorar Nave'}
   </button>
   <button
-    className={`accion-btn ${!esMiTurno ? 'accion-btn--blocked' : ''}`}
-    onClick={() => {}}
-    disabled={!esMiTurno}
-    title={!esMiTurno ? 'No es tu turno' : 'Usar Nave'}
-  >Usar Nave</button>
+    className={`accion-btn ${!esMiTurno ? 'accion-btn--blocked' : ''} ${usingNave ? 'accion-btn--loading' : ''}`}
+    onClick={usarNaveHandler}
+    disabled={!esMiTurno || usingNave}
+    title={!esMiTurno ? 'No es tu turno' : (usingNave ? 'Usando nave...' : 'Usar Nave')}
+  >{usingNave ? 'Usando...' : 'Usar Nave'}</button>
+  {selectingDestino && (
+    <button
+      className="accion-btn accion-btn--cancel"
+      onClick={() => { setSelectingDestino(false); setSelectedShipForUse(null); setUsingNave(false); }}
+    >Cancelar selección</button>
+  )}
   <button
     className={`accion-btn ${!esMiTurno ? 'accion-btn--blocked' : ''}`}
     onClick={() => {}}
@@ -618,7 +824,7 @@ export default function Partida() {
       {/* Tablero central */}
       <div className="tablero">
         <div className="map-wrapper">
-           <Mapa bases={bases} jugadores={jugadores} planetas={planetas} />
+           <Mapa bases={bases} jugadores={jugadores} planetas={planetas} naves={naves} onTerritorioClick={handleTerritorioSeleccionado} selectingDestino={selectingDestino} />
  
            {/* Recursos posicionados a distancia fija respecto al mapa */}
            <div className="recursos">

@@ -84,7 +84,7 @@ export default function ComoJugar() {
               <li><strong>Sinergias:</strong> Prioriza planetas que completen tus costos faltantes.</li>
               <li><strong>Tiempo:</strong> Construir base antes que el rival vale más que una mejora tardía.</li>
             </ul>
-            <h3><span className="c1">Errores frecuentes</span></h3>
+            <h2><span className="c1">Errores frecuentes</span></h2>
             <ul>
               <li>Construir nave sin poder usarla ese turno y sin plan de ruta.</li>
               <li>Olvidar que no se puede viajar a planetas con base.</li>

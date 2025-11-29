@@ -7,11 +7,15 @@ import logoAlien from "../assets/img/alien-skull-svgrepo-com.svg";
 import logoAnimal from "../assets/img/animal-skull-svgrepo-com.svg";
 // import baseImg from "../assets/img/base.png";
 import origenImg from "../assets/img/origen.png";
+import nave_b from "../assets/img/nave_b.png";
+import nave_i from "../assets/img/nave_i.png";
+import nave_a from "../assets/img/nave_a.png";
 
 export default function Territorio({
   id, points, fill = 'transparent', label, onClick, ownerColor, hasBase, base = null,
   cx, cy, resourceColor, showLabel = false, casaId = null, esOrigen = null, pointingUp = true,
-  baseOwnerLabel = null, originOwnerLabel = null
+  baseOwnerLabel = null, originOwnerLabel = null,
+  ships = [], selectingDestino = false
 }) {
   // points: string "x1,y1 x2,y2 x3,y3"
   // Priority: ownerColor (player) > resourceColor (tile) > default fill
@@ -27,8 +31,11 @@ export default function Territorio({
   const pillHeight = 16;
   const pillRx = 8; // pill corner radius
 
+  const className = 'territorio' + (onClick ? ' clickable' : '') + (selectingDestino && onClick ? ' selecting-dest' : '');
+  const style = { cursor: selectingDestino ? 'crosshair' : (onClick ? 'pointer' : 'default') };
+
   return (
-    <g className={"territorio" + (onClick ? ' clickable' : '')} data-id={id} onClick={() => onClick && onClick(id)}>
+    <g className={className} data-id={id} onClick={() => onClick && onClick(id)} style={style}>
       {/* polygon with no stroke; borders are drawn globally to avoid double-stroke gaps */}
       <polygon points={points} fill={displayFill} stroke="none" fillOpacity={1} />
       
@@ -196,6 +203,34 @@ export default function Territorio({
         return null;
       })()}
 
+        {/* Mostrar icono de nave(s) centrado en el territorio */}
+        {Array.isArray(ships) && ships.length > 0 && typeof cx === 'number' && typeof cy === 'number' && (() => {
+          // elegir la nave a mostrar (priorizar avanzada > intermedia > basica)
+          const normalize = s => (s && s.nivel ? String(s.nivel).toLowerCase() : (s && s.level ? String(s.level).toLowerCase() : ''));
+          const order = ['avanzada', 'avanz', 'intermedia', 'inter', 'basica', 'bas'];
+          let chosen = ships[0];
+          for (const pref of order) {
+            const found = ships.find(s => normalize(s).includes(pref));
+            if (found) { chosen = found; break; }
+          }
+
+          // mapear nivel a imagen
+          const lvl = normalize(chosen);
+          let href = nave_b;
+          if (lvl.includes('avanz')) href = nave_a;
+          else if (lvl.includes('inter')) href = nave_i;
+          else href = nave_b;
+
+          const size = 18;
+          const x = cx - size / 2;
+          const y = cy - size / 2;
+          return (
+            <>
+              <image href={href} x={x} y={y} width={size} height={size} pointerEvents="none" />
+            </>
+          );
+        })()}
+
       {showLabel && label && typeof cx === 'number' && typeof cy === 'number' && (
         <>
           {/* white pill background centered at (cx,cy) */}
@@ -224,6 +259,7 @@ export default function Territorio({
           </text>
         </>
       )}
+      
     </g>
   );
 } 

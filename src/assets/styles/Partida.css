@@ -67,7 +67,7 @@ width: 100%;
 padding: 8px 12px;
 margin: 6px 0;
 border-radius: 8px;
-border: 1.5px solid #0b2237; / mismo color que los títulos */
+border: 1.5px solid #0b2237; /* mismo color que los títulos */
 color: #0b2237;
 font-weight:800;
 background: linear-gradient(180deg, rgba(255,255,255,0.02), rgba(255,255,255,0.01));
