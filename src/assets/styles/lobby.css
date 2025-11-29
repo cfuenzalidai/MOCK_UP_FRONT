@@ -31,8 +31,23 @@
 	/* ensure an empty actions cell still reserves the same width visually */
 	min-width: 120px;
 	display: flex;
+	gap: 8px;
 	align-items: center;
 	justify-content: flex-end;
 }
 .lobby-controls { display:flex; gap:8px; justify-content:flex-end; }
 .btn.small { padding:4px 8px; font-size:0.85rem; }
+
+/* Ready / Not-ready button styles */
+.btn.not-ready {
+	background: #8b1e1e; /* red */
+	border-color: #7a1a1a;
+	color: #fff;
+}
+.btn.not-ready:hover { filter: brightness(1.02); }
+.btn.ready {
+	background: #1b8a3e; /* green */
+	border-color: #167033;
+	color: #fff;
+}
+.btn.ready:hover { filter: brightness(1.03); }

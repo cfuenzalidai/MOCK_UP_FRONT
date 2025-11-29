@@ -53,7 +53,7 @@ export async function cambiarEstadoPartida(partidaId) {
   if (!partidaId) throw new Error('partidaId es requerido');
 
   try {
-    const res = await api.post(`/partidas/${partidaId}/iniciar`);
+    const res = await api.put(`/partidas/${partidaId}/iniciar`);
     return res.data;
   } catch (err) {
     const status = err?.response?.status;
@@ -227,6 +227,25 @@ export async function obtenerRecursos(jugadorId) {
       // endpoint missing -> return empty
       return { raw: [], map: {}, mapLower: {}, mapById: {} };
     }
+    throw err;
+  }
+}
+
+export async function obtenerNaves(partidaId, jugadorEnPartidaId) {
+  if (!partidaId) throw new Error('partidaId es requerido');
+  try {
+    const qs = [];
+    qs.push(`partidaId=${encodeURIComponent(partidaId)}`);
+    if (jugadorEnPartidaId) qs.push(`jugadorEnPartidaId=${encodeURIComponent(jugadorEnPartidaId)}`);
+    const res = await api.get(`/naves?${qs.join('&')}`);
+    const d = res.data;
+    if (Array.isArray(d)) return d;
+    if (Array.isArray(d.data)) return d.data;
+    if (Array.isArray(d.naves)) return d.naves;
+    return [];
+  } catch (err) {
+    const status = err?.response?.status;
+    if (status && [404, 405].includes(status)) return [];
     throw err;
   }
 }

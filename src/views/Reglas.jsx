@@ -114,7 +114,7 @@ export default function Reglas() {
                 <strong>
                   <span className="c2">Dado de eficiencia:</span>
                 </strong>{' '}
-                Dado de 4 caras que afecta la producción del imperio: puede resultar en
+                Dado de 4 caras que afecta la producción del imperio: puede resultar en 
                 <code>x1</code> (producción normal), <code>x2</code> (dobla la
                 producción) o <code>x0</code> (detiene la producción).
               </li>
