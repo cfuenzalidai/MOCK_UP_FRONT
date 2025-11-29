@@ -2,7 +2,9 @@ import { useState } from 'react';
 import Territorio from '../components/Territorio';
 import '../assets/styles/Mapa.css';
 
-export default function Mapa({ bases = [], jugadores = [], planetas = [], naves = [], onTerritorioClick = null, selectingDestino = false }) {
+
+export default function Mapa({ bases = [], jugadores = [], planetas = [], mapaId = null, onSelect = null, selectedId: propSelectedId = null, naves = [], onTerritorioClick = null, selectingDestino = false }) {
+
   const cell = 80; 
   const [territorios, _setTerritorios] = useState(() => {
     const arr = [];
@@ -16,7 +18,13 @@ export default function Mapa({ bases = [], jugadores = [], planetas = [], naves 
     }
     return arr;
   });
-  const [selectedId, setSelectedId] = useState(null);
+  const [selectedId, setSelectedId] = useState(propSelectedId || null);
+
+  // Keep internal selection in sync when parent provides `selectedId` prop
+  React.useEffect(() => {
+    if (propSelectedId === undefined) return;
+    if (propSelectedId !== selectedId) setSelectedId(propSelectedId);
+  }, [propSelectedId]);
 
   function mulberry32(a) {
     return function() {
@@ -57,7 +65,9 @@ export default function Mapa({ bases = [], jugadores = [], planetas = [], naves 
   const assignment = {};
   targetLabels.forEach((lab, i) => { assignment[lab] = pool[i]; });
   function handleClick(id) {
-    setSelectedId(prev => (prev === id ? null : id));
+    const next = (selectedId === id ? null : id);
+    setSelectedId(next);
+    if (typeof onSelect === 'function') onSelect(next);
   }
 
   const geometries = [];
@@ -221,6 +231,8 @@ export default function Mapa({ bases = [], jugadores = [], planetas = [], naves 
       });
     }
   }
+
+  
 
   // añadir un pequeño padding alrededor
   const pad = 12;

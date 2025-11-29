@@ -28,6 +28,9 @@ export default function Partida() {
   const [planetas, setPlanetas] = useState([]);
   const [miJugador, setMiJugador] = useState(null);
   const [recursos, setRecursos] = useState({});
+  const [partidaFinalizada, setPartidaFinalizada] = useState(false);
+  const [ganador, setGanador] = useState(null);
+  const [selectedTerritorio, setSelectedTerritorio] = useState(null);
   const [buildingNave, setBuildingNave] = useState(false);
   const [navesCount, setNavesCount] = useState({ basica: 0, intermedia: 0, avanzada: 0 });
   const [improving, setImproving] = useState(false);
@@ -547,6 +550,56 @@ export default function Partida() {
             console.error('Error al refrescar recursos tras tirar dado:', e);
           }
       }
+      // Refrescar recursos del jugador actual después del lanzamiento
+      try {
+        const jugadorIdForRecursos = miJugador?.jugadorEnPartidaId || miJugador?.id || miJugador?.userId || miJugador?.usuarioId;
+        const extractDiceValue = r => {
+          if (r == null) return null;
+          if (typeof r === 'number') return r;
+          if (Array.isArray(r) && r.length > 0) return extractDiceValue(r[0]);
+          const candidates = ['valor', 'value', 'dado', 'resultado', 'roll', 'result', 'dice'];
+          for (const k of candidates) {
+            const v = r[k];
+            if (typeof v === 'number') return v;
+            if (typeof v === 'string' && !Number.isNaN(Number(v))) return Number(v);
+          }
+          for (const k of Object.keys(r)) {
+            const v = r[k];
+            if (typeof v === 'number') return v;
+            if (typeof v === 'string' && !Number.isNaN(Number(v))) return Number(v);
+          }
+          return null;
+        };
+
+        const diceValue = extractDiceValue(resultado) || 0;
+        if (jugadorIdForRecursos) {
+          // try to get base recoleccion (per-1) from backend or compute locally using bases/planetas
+          const perOne = await juego.recoleccion(partidaId, jugadorIdForRecursos, { bases, planetas });
+
+          // perOne is a map like { Especia: 1, Metal: 1 }
+          if (perOne && Object.keys(perOne).length > 0 && diceValue > 0) {
+            const increments = {};
+            Object.keys(perOne).forEach(k => {
+              const per = typeof perOne[k] === 'number' ? perOne[k] : Number(perOne[k]) || 0;
+              if (per > 0) increments[k] = per * diceValue;
+            });
+
+            // Apply increments to local state (merge) using only recoleccion (no obtenerRecursos)
+            const newMap = { ...recursos };
+            Object.keys(increments).forEach(name => {
+              const current = newMap[name] ?? newMap[name.toLowerCase()] ?? 0;
+              newMap[name] = (Number(current) || 0) + increments[name];
+            });
+            setRecursos(newMap);
+
+            // Notify player which resources were gained
+            const parts = Object.keys(increments).map(k => `${k}: +${increments[k]}`);
+            if (parts.length > 0) alert('Recolección: ' + parts.join(', '));
+          }
+        }
+      } catch (e) {
+        console.error('Error al procesar recolección tras tirar dado', e);
+      }
     } catch (err) {
       console.error('Error al lanzar dado', err);
       const remoteMessage = err?.response?.data?.error?.message || err?.response?.data?.message;
@@ -571,8 +624,36 @@ export default function Partida() {
       const turnoNuevo = await juego.obtenerTurnoActivo(partidaId);
       setTurnoActivo(turnoNuevo);
 
-      console.info('Cambiar turno result:', res);
-      alert('Turno cambiado');
+      console.log('Cambiar turno result:', res);
+      // Verificar puntajeCache de jugadores para detectar ganador
+      try {
+        const js = await juego.jugadores(partidaId);
+        // Buscar jugador con puntajeCache === 5
+        const winner = (Array.isArray(js) ? js : []).find(j => {
+          let val;
+          if (typeof j.puntajeCache !== 'undefined' && j.puntajeCache !== null) val = j.puntajeCache;
+          else if (typeof j.puntaje_cache !== 'undefined' && j.puntaje_cache !== null) val = j.puntaje_cache;
+          else if (typeof j.puntaje !== 'undefined' && j.puntaje !== null) val = j.puntaje;
+          else val = undefined;
+          return Number(val) === 5;
+        });
+        if (winner) {
+          const nombre = winner.nombre || winner.name || winner.usuario || winner.username || `Jugador ${winner.id || winner.userId || ''}`;
+          setPartidaFinalizada(true);
+          setGanador(nombre);
+          alert(`Partida finalizada. Ganador: ${nombre}`);
+          // redirigir al inicio después de 2s
+          setTimeout(() => {
+            window.location.href = '/';
+          }, 2000);
+          return; // no seguir con el flujo normal
+        }
+
+        alert('Turno cambiado');
+      } catch (e) {
+        console.error('Error al verificar ganador tras cambiar turno', e);
+        alert('Turno cambiado');
+      }
     } catch (err) {
       console.error('Error al cambiar turno', err);
       const remoteMessage = err?.response?.data?.message || err?.message;
@@ -946,8 +1027,51 @@ export default function Partida() {
     }
   }
 
+  async function construirBase() {
+    if (!partidaId) {
+      alert('No se pudo determinar la partida.');
+      return;
+    }
+    const planetaId = selectedTerritorio;
+    if (!planetaId) {
+      alert('Selecciona un territorio donde construir la base.');
+      return;
+    }
+    const jugadorIdForRecursos = miJugador?.jugadorEnPartidaId || miJugador?.id || miJugador?.userId || miJugador?.usuarioId;
+    if (!jugadorIdForRecursos) {
+      alert('No se pudo determinar el jugador.');
+      return;
+    }
+
+    try {
+      const res = await juego.construirBase(partidaId, jugadorIdForRecursos, planetaId);
+      // res may be null if endpoint missing; treat non-error as success if server responds
+      alert('Base construida correctamente');
+      // Refresh bases and planetas to reflect new base
+      try {
+        const b = await juego.obtenerBases(partidaId);
+        setBases(b || []);
+      } catch (e) { console.warn('No se pudieron refrescar las bases', e); }
+      try {
+        const p = await juego.obtenerPlanetas(partidaId);
+        setPlanetas(p || []);
+      } catch (e) { console.warn('No se pudieron refrescar los planetas', e); }
+      // clear selection
+      setSelectedTerritorio(null);
+    } catch (err) {
+      console.error('Error al construir base', err);
+      const remoteMessage = err?.response?.data?.message || err?.message;
+      alert(remoteMessage || 'No se pudo construir la base. Revisa la consola.');
+    }
+  }
+
   return (
     <div className="partida-container">
+      {partidaFinalizada && ganador && (
+        <div className="final-banner" style={{padding: '12px', background: '#fde68a', textAlign: 'center', width: '100%'}}>
+          <strong>Partida finalizada.</strong> Ganador: {ganador}
+        </div>
+      )}
   {/* Panel izquierdo */}
       <div className="panel-izquierdo">
         <h3>Naves</h3>
@@ -970,6 +1094,20 @@ export default function Partida() {
         </div>
         {/* debug button removed */}
   <h3>Acciones</h3>
+  <button className="accion-btn">Construir Nave</button>
+  <button className="accion-btn">Mejorar Nave</button>
+  <button className="accion-btn">Usar Nave</button>
+  <button
+    className="accion-btn"
+    onClick={construirBase}
+    disabled={
+      partidaFinalizada || !selectedTerritorio || !esMiTurno ||
+      bases.some(b => String(b.planetaId) === String(selectedTerritorio) || String(b.planetaId) === `T${selectedTerritorio}`)
+    }
+  >
+    Construir Base
+  </button>
+  <button className="accion-btn">Origen</button>
   {/* Acciones: cambiar apariencia cuando no es tu turno (clase + title) */}
   <button
     className={`accion-btn ${!esMiTurno ? 'accion-btn--blocked' : ''} ${buildingNave ? 'accion-btn--loading' : ''}`}
@@ -1015,6 +1153,27 @@ export default function Partida() {
 
       {/* Tablero central */}
       <div className="tablero">
+        <Mapa bases={bases} jugadores={jugadores} planetas={planetas} mapaId={partidaId} onSelect={setSelectedTerritorio} selectedId={selectedTerritorio} />
+
+        {/* Recursos debajo del tablero */}
+        <div className="recursos">
+            <div className="recurso">
+                <img src={img_especia} alt="Especia" width={28} height={28} />
+              <span>Especia: {recursos['Especia'] ?? recursos['especia'] ?? 0}</span>
+            </div>
+            <div className="recurso">
+                <img src={img_metal} alt="Metal" width={28} height={28} />
+              <span>Metal: {recursos['Metal'] ?? recursos['metal'] ?? 0}</span>
+            </div>
+            <div className="recurso">
+                <img src={img_agua} alt="Agua" width={28} height={28} />
+              <span>Agua: {recursos['Agua'] ?? recursos['agua'] ?? 0}</span>
+            </div>
+            <div className="recurso">
+                <img src={img_liebre} alt="Liebre" width={28} height={28} />
+              <span>Liebre: {recursos['Liebre'] ?? recursos['liebre'] ?? 0}</span>
+            </div>
+        </div>
         <div className="map-wrapper">
            <Mapa bases={bases} jugadores={jugadores} planetas={planetas} naves={naves} onTerritorioClick={handleTerritorioSeleccionado} selectingDestino={selectingDestino} />
  
@@ -1059,7 +1218,7 @@ export default function Partida() {
         </div>
 
         {/* Botones independientes bajo puntaje (fuera del fondo gris) */}
-       {esMiTurno && (
+      {esMiTurno && !partidaFinalizada && (
         <div className="lanzar-dado-container">
           <button
             className="btn-lanzar"
