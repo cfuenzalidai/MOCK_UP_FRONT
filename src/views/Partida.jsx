@@ -1,17 +1,17 @@
-import Mapa from "./Mapa";
-import { useState, useEffect, useRef } from 'react';
+import Mapa from './Mapa';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import { useParams } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import socketService from '../services/socket';
-import "../assets/styles/Partida.css";
-import img_especia from "../assets/img/especia.png";
-import img_metal from "../assets/img/metal.png";
-import img_agua from "../assets/img/agua.png";
-import img_liebre from "../assets/img/liebre.png";
-import nave_b from "../assets/img/nave_b.png";
-import nave_i from "../assets/img/nave_i.png";
-import nave_a from "../assets/img/nave_a.png";
-import baseImg from "../assets/img/base.png";
+import '../assets/styles/Partida.css';
+import imgEspecia from '../assets/img/especia.png';
+import imgMetal from '../assets/img/metal.png';
+import imgAgua from '../assets/img/agua.png';
+import imgLiebre from '../assets/img/liebre.png';
+import naveB from '../assets/img/nave_b.png';
+import naveI from '../assets/img/nave_i.png';
+import naveA from '../assets/img/nave_a.png';
+import baseImg from '../assets/img/base.png';
 import api from '../services/api';
 import * as juego from '../services/juego';
 
@@ -33,6 +33,16 @@ export default function Partida() {
   const prevIsMyTurnRef = useRef(false);
   const initialisedTurnRef = useRef(false);
 
+  // Función reutilizable para cargar puntajes (se usa desde efectos y tras cambios de turno)
+  const cargarPuntajes = useCallback(async () => {
+    try {
+      const data = await juego.obtenerPuntajes(partidaId);
+      setPuntajes(data);
+    } catch (err) {
+      console.error('Error al cargar puntajes:', err);
+    }
+  }, [partidaId]);
+
 
   useEffect(() => {
     if (!partidaId || !user?.id) return;
@@ -42,11 +52,11 @@ export default function Partida() {
         const js = await juego.jugadores(partidaId);
         setJugadores(js || []);
         const encontrado = (js || []).find(j =>
-          String(j.usuarioId) === String(user.id) || String(j.userId) === String(user.id) || String(j.id) === String(user.id)
+          String(j.usuarioId) === String(user.id) || String(j.userId) === String(user.id) || String(j.id) === String(user.id),
         );
         setMiJugador(encontrado || null);
       } catch (err) {
-        console.error("Error al cargar mis datos de jugador:", err);
+        console.error('Error al cargar mis datos de jugador:', err);
         setJugadores([]);
         setMiJugador(null);
       }
@@ -73,12 +83,34 @@ export default function Partida() {
         const pid = payload?.partidaId || payload?.partida?.id || payload?.partida;
         if (pid && String(pid) !== String(partidaId)) return;
         // refrescar puntajes y turno
-        try { await cargarPuntajes(); } catch (e) { /* ignore */ }
-        try { const turno = await juego.obtenerTurnoActivo(partidaId); setTurnoActivo(turno); } catch (e) { /* ignore */ }
+        try { await cargarPuntajes(); } catch (_e) { console.error(_e); }
+        try { const turno = await juego.obtenerTurnoActivo(partidaId); setTurnoActivo(turno); } catch (_e) { console.error(_e); }
         // refrescar recursos y bases y naves para mi jugador
-        try { if (miJugador) { const id = miJugador.jugadorEnPartidaId || miJugador.id || miJugador.userId || miJugador.usuarioId; const r = await juego.obtenerRecursos(id); setRecursos(r.map || {}); } } catch (e) {}
-        try { const b = await juego.obtenerBases(partidaId); setBases(b || []); } catch (e) {}
-        try { if (miJugador) { const actor = miJugador.jugadorEnPartidaId || miJugador.id || miJugador.userId || miJugador.usuarioId; const naves = await juego.obtenerNaves(partidaId, actor); const counts = { basica: 0, intermedia: 0, avanzada: 0 }; (naves||[]).forEach(n => { const lvl = (n.nivel||n.level||'').toString().toLowerCase(); if (lvl.includes('bas')) counts.basica += 1; else if (lvl.includes('inter')) counts.intermedia += 1; else if (lvl.includes('avanz')) counts.avanzada += 1; }); setNavesCount(counts); } } catch (e) {}
+        try {
+          if (miJugador) {
+            const id = miJugador.jugadorEnPartidaId || miJugador.id || miJugador.userId || miJugador.usuarioId;
+            const r = await juego.obtenerRecursos(id);
+            setRecursos(r.map || {});
+          }
+        } catch (e) { console.error(e); }
+        try {
+          const b = await juego.obtenerBases(partidaId);
+          setBases(b || []);
+        } catch (e) { console.error(e); }
+        try {
+          if (miJugador) {
+            const actor = miJugador.jugadorEnPartidaId || miJugador.id || miJugador.userId || miJugador.usuarioId;
+            const naves = await juego.obtenerNaves(partidaId, actor);
+            const counts = { basica: 0, intermedia: 0, avanzada: 0 };
+            (naves || []).forEach((n) => {
+              const lvl = (n.nivel || n.level || '').toString().toLowerCase();
+              if (lvl.includes('bas')) counts.basica += 1;
+              else if (lvl.includes('inter')) counts.intermedia += 1;
+              else if (lvl.includes('avanz')) counts.avanzada += 1;
+            });
+            setNavesCount(counts);
+          }
+        } catch (e) { console.error(e); }
       } catch (e) { console.error('Error manejando jugada:creada', e); }
     };
 
@@ -107,7 +139,7 @@ export default function Partida() {
       setBases(prev => prev.filter(b => String(b.id || b._id) !== String(id)));
     };
 
-    const onNaveEvent = async (payload) => {
+    const onNaveEvent = async (_payload) => {
       // para simplicidad actualizamos contador de naves del jugador
       try {
         if (!miJugador) return;
@@ -153,7 +185,7 @@ export default function Partida() {
       try { socketService.leavePartida(partidaId); } catch (e) { void e; }
       try { offs.forEach(fn => { if (typeof fn === 'function') fn(); }); } catch (e) { void e; }
     };
-  }, [partidaId, user, booting, miJugador]);
+  }, [partidaId, user, booting, miJugador, cargarPuntajes]);
 
 
   // Cargar bases asociadas a la partida (para mostrar bases en el mapa)
@@ -208,8 +240,8 @@ export default function Partida() {
           alert('¡Es tu turno!');
         }
         prevIsMyTurnRef.current = nowMyTurn;
-      } catch (err) {
-        // ignore transient errors
+      } catch (_err) {
+        void _err;
       }
     }, 2000);
 
@@ -316,22 +348,12 @@ export default function Partida() {
   }, [miJugador, partidaId]);
 
 
-  // Función reutilizable para cargar puntajes (se usa desde efectos y tras cambios de turno)
-  async function cargarPuntajes() {
-    try {
-      const data = await juego.obtenerPuntajes(partidaId);
-      setPuntajes(data);
-    } catch (err) {
-      console.error("Error al cargar puntajes:", err);
-    }
-  }
-
   // Cargar puntajes cuando tengamos partidaId y bootstrap de auth finalizado
   useEffect(() => {
     if (!partidaId) return;
     if (booting) return; // esperar a que AuthContext termine
     cargarPuntajes();
-  }, [partidaId, booting]);
+  }, [cargarPuntajes, booting, partidaId]);
 
   // Cargar turno activo cuando tengamos partidaId y auth listo
   useEffect(() => {
@@ -420,7 +442,7 @@ export default function Partida() {
       setTurnoActivo(turnoNuevo);
 
       const resultado = res?.data ?? res;
-      console.log('Resultado lanzar dado:', resultado);
+      console.info('Resultado lanzar dado:', resultado);
       if (resultado && resultado.error && resultado.error.message) {
         alert(resultado.error.message);
       } else {
@@ -442,30 +464,30 @@ export default function Partida() {
           if (Array.isArray(recursos) && recursos.length > 0) {
             // Formatear múltiples recursos si es necesario
             const partes = recursos.map(r => {
-              const cantidad = r.cantidad ?? r.cant ?? r.amount ?? 0;
-              const nombre = r.Recurso?.nombre || r.recurso?.nombre || recursoNameFromId(r.recursoId || r.RecursoId || r.recursoId);
-              return `${cantidad} ${nombre}`;
-            });
+                const cantidad = r.cantidad ?? r.cant ?? r.amount ?? 0;
+                const nombre = r.Recurso?.nombre || r.recurso?.nombre || recursoNameFromId(r.recursoId || r.RecursoId || r.recursoId);
+                return `${cantidad} ${nombre}`;
+              });
             const recursosTxt = partes.join(', ');
-            const tiroTxt = multiplicador != null
+            const tiroTxt = multiplicador !== null
               ? `Te salió un x${multiplicador}, `
-              : (fallbackVal != null ? `Te salió un ${fallbackVal}, ` : 'Resultado: ');
+              : (fallbackVal !== null ? `Te salió un ${fallbackVal}, ` : 'Resultado: ');
             const sad = multiplicador === 0 ? ' 😢' : '';
             alert(`${tiroTxt}obtienes ${recursosTxt}${sad}`);
-          } else if (multiplicador != null || fallbackVal != null) {
-            if (multiplicador != null) {
+          } else if (multiplicador !== null || fallbackVal !== null) {
+            if (multiplicador !== null) {
               const sad = multiplicador === 0 ? ' 😢' : '';
               alert(`Te salió un x${multiplicador}${sad}`);
             } else {
               alert(`Te salió un ${fallbackVal}`);
             }
           } else {
-            alert('Resultado: ' + JSON.stringify(resultado));
+            alert(`Resultado: ${JSON.stringify(resultado)}`);
           }
-        } catch (e) {
-          console.error('Error formateando resultado del dado:', e);
-          alert('Resultado: ' + JSON.stringify(resultado));
-        }
+          } catch (e) {
+            console.error('Error formateando resultado del dado:', e);
+            alert(`Resultado: ${JSON.stringify(resultado)}`);
+          }
       }
     } catch (err) {
       console.error('Error al lanzar dado', err);
@@ -491,7 +513,7 @@ export default function Partida() {
       const turnoNuevo = await juego.obtenerTurnoActivo(partidaId);
       setTurnoActivo(turnoNuevo);
 
-      console.log('Cambiar turno result:', res);
+      console.info('Cambiar turno result:', res);
       alert('Turno cambiado');
     } catch (err) {
       console.error('Error al cambiar turno', err);
@@ -500,7 +522,7 @@ export default function Partida() {
     } finally {
       setCambiandoTurno(false);
       // refrescar puntajes tras cambio de turno
-      try { await cargarPuntajes(); } catch (e) { /* ya logueado por la función */ }
+      try { await cargarPuntajes(); } catch (e) { console.error(e); }
     }
   }
 
@@ -531,13 +553,13 @@ export default function Partida() {
 
       // Intentar crear la jugada de tipo construir_nave; el backend validará recursos
       const payload = { partidaId: Number(partidaId), turnoId: Number(turnoId), actorId: Number(actorId), tipo: 'construir_nave', payload: {} };
-      console.debug('Construir nave - payload:', payload);
+      console.info('Construir nave - payload:', payload);
       const res = await api.post('/jugadas', payload);
       // refrescar datos relevantes
-      try { await cargarPuntajes(); } catch (e) { /* no bloquear */ }
-      try { const turnoNuevo = await juego.obtenerTurnoActivo(partidaId); setTurnoActivo(turnoNuevo); } catch (e) { /* ignore */ }
-      try { const id = actorId; const r = await juego.obtenerRecursos(id); setRecursos(r.map || {}); } catch (e) { /* ignore */ }
-      try { const b = await juego.obtenerBases(partidaId); setBases(b || []); } catch (e) { /* ignore */ }
+      try { await cargarPuntajes(); } catch (_e) { console.error(_e); }
+      try { const turnoNuevo = await juego.obtenerTurnoActivo(partidaId); setTurnoActivo(turnoNuevo); } catch (_e) { console.error(_e); }
+      try { const id = actorId; const r = await juego.obtenerRecursos(id); setRecursos(r.map || {}); } catch (_e) { console.error(_e); }
+      try { const b = await juego.obtenerBases(partidaId); setBases(b || []); } catch (_e) { console.error(_e); }
       try {
         // actualizar contador de naves inmediatamente
         const actor = actorId;
@@ -550,7 +572,7 @@ export default function Partida() {
           else if (lvl.includes('avanz') || lvl.includes('avanzada')) counts.avanzada += 1;
         });
         setNavesCount(counts);
-      } catch (e) { /* ignore naves refresh errors */ }
+      } catch (_e) { console.error(_e); }
 
       alert('Nave construida correctamente.');
       return res.data ?? res;
@@ -561,7 +583,7 @@ export default function Partida() {
         const remote = err.response.data?.error || err.response.data;
         const msg = remote?.message || remote?.code || JSON.stringify(remote) || err.message || 'Error al construir nave';
         if (remote?.detalle) {
-          alert(msg + ': ' + JSON.stringify(remote.detalle));
+          alert(`${msg  }: ${  JSON.stringify(remote.detalle)}`);
         } else {
           alert(msg);
         }
@@ -598,8 +620,8 @@ export default function Partida() {
       if (upgradables.length === 1) {
         selected = upgradables[0];
       } else {
-        const list = upgradables.map(n => `${n.id}: ${n.nivel}${n.planetaId ? ' (planeta ' + n.planetaId + ')' : ''}`).join('\n');
-        const entrada = window.prompt('Elige el id de la nave a mejorar:\n' + list);
+        const list = upgradables.map((n) => `${n.id}: ${n.nivel}${n.planetaId ? ` (planeta ${n.planetaId})` : ''}`).join('\n');
+        const entrada = window.prompt(`Elige el id de la nave a mejorar:\n${list}`);
         if (!entrada) return; // cancel
         const idSel = Number(entrada.trim());
         selected = upgradables.find(n => Number(n.id) === idSel);
@@ -621,20 +643,20 @@ export default function Partida() {
       try {
         const refreshed = await juego.obtenerNaves(partidaId, actorId);
         const counts = { basica: 0, intermedia: 0, avanzada: 0 };
-        (refreshed || []).forEach(n => {
+        (refreshed || []).forEach((n) => {
           const lvl = (n.nivel || n.level || '').toString().toLowerCase();
           if (lvl.includes('bas')) counts.basica += 1;
           else if (lvl.includes('inter')) counts.intermedia += 1;
           else if (lvl.includes('avanz') || lvl.includes('avanzada')) counts.avanzada += 1;
         });
         setNavesCount(counts);
-      } catch (e) { /* ignore */ }
+      } catch (e) { console.error(e); }
 
-      alert(`Tu nave ${originalNivel} fue mejorada${nuevoNivel ? ' a ' + nuevoNivel : ''}.`);
+      alert(`Tu nave ${originalNivel} fue mejorada${nuevoNivel ? ` a ${nuevoNivel}` : ''}.`);
       // refrescar puntajes/turno/recursos
-      try { await cargarPuntajes(); } catch (e) {}
-      try { const turnoNuevo = await juego.obtenerTurnoActivo(partidaId); setTurnoActivo(turnoNuevo); } catch (e) {}
-      try { const id = actorId; const r = await juego.obtenerRecursos(id); setRecursos(r.map || {}); } catch (e) {}
+      try { await cargarPuntajes(); } catch (e) { console.error(e); }
+      try { const turnoNuevo = await juego.obtenerTurnoActivo(partidaId); setTurnoActivo(turnoNuevo); } catch (e) { console.error(e); }
+      try { const id = actorId; const r = await juego.obtenerRecursos(id); setRecursos(r.map || {}); } catch (e) { console.error(e); }
       return res.data ?? res;
     } catch (err) {
       console.error('Error al mejorar nave:', err);
@@ -643,7 +665,7 @@ export default function Partida() {
         const remote = err.response.data?.error || err.response.data;
         const msg = remote?.message || remote?.code || JSON.stringify(remote) || err.message || 'Error al mejorar nave';
         if (remote?.detalle) {
-          alert(msg + ': ' + JSON.stringify(remote.detalle));
+          alert(`${msg}: ${JSON.stringify(remote.detalle)}`);
         } else {
           alert(msg);
         }
@@ -661,15 +683,15 @@ export default function Partida() {
       <div className="panel-izquierdo">
         <h3>Naves</h3>
           <div className="control">
-           <img src={nave_b} alt="Nave Basica" className="icon-nave icon-nave--b" />
+           <img src={naveB} alt="Nave Basica" className="icon-nave icon-nave--b" />
            <span>Naves Básicas: {navesCount.basica}</span>
          </div>
          <div className="control">
-           <img src={nave_i} alt="Nave Intermedia" className="icon-nave icon-nave--i" />
+           <img src={naveI} alt="Nave Intermedia" className="icon-nave icon-nave--i" />
            <span>Naves Intermedias: {navesCount.intermedia}</span>
          </div>
          <div className="control">
-           <img src={nave_a} alt="Nave Avanzada" className="icon-nave icon-nave--a" />
+           <img src={naveA} alt="Nave Avanzada" className="icon-nave icon-nave--a" />
            <span>Naves Avanzadas: {navesCount.avanzada}</span>
         </div>
         <h3>Bases</h3>
@@ -724,19 +746,19 @@ export default function Partida() {
            {/* Recursos posicionados a distancia fija respecto al mapa */}
            <div className="recursos">
              <div className="recurso">
-               <img src={img_especia} alt="Especia" className="icon-recurso icon-recurso--especia" />
+               <img src={imgEspecia} alt="Especia" className="icon-recurso icon-recurso--especia" />
                <span>Especia: {recursos['Especia'] ?? recursos['especia'] ?? 0}</span>
              </div>
              <div className="recurso">
-               <img src={img_metal} alt="Metal" className="icon-recurso icon-recurso--metal" />
+               <img src={imgMetal} alt="Metal" className="icon-recurso icon-recurso--metal" />
                <span>Metal: {recursos['Metal'] ?? recursos['metal'] ?? 0}</span>
              </div>
              <div className="recurso">
-               <img src={img_agua} alt="Agua" className="icon-recurso icon-recurso--agua" />
+               <img src={imgAgua} alt="Agua" className="icon-recurso icon-recurso--agua" />
                <span>Agua: {recursos['Agua'] ?? recursos['agua'] ?? 0}</span>
              </div>
              <div className="recurso">
-               <img src={img_liebre} alt="Liebre" className="icon-recurso icon-recurso--liebre" />
+               <img src={imgLiebre} alt="Liebre" className="icon-recurso icon-recurso--liebre" />
                <span>Liebre: {recursos['Liebre'] ?? recursos['liebre'] ?? 0}</span>
              </div>
            </div>

@@ -3,7 +3,6 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import api from '../services/api';
 import '../assets/styles/lobby.css';
-import * as juego from '../services/juego';
 
 export default function Lobby() {
   const { partidaId } = useParams();
@@ -32,8 +31,8 @@ export default function Lobby() {
         const partidaData = pRes?.data || null;
         const jugadoresData = (jRes?.data?.jugadores || []).map((j) => ({ ...j, id: j.id || j._id }));
         // Debug: mostrar shapes en consola
-        console.debug('[Lobby] fetchAll partida:', partidaData);
-        console.debug('[Lobby] fetchAll jugadores:', jugadoresData);
+        console.info('[Lobby] fetchAll partida:', partidaData);
+        console.info('[Lobby] fetchAll jugadores:', jugadoresData);
         setPartida(partidaData);
          // Resolver label del owner de forma robusta: si no viene el nombre, intentar obtenerlo por ownerId
          (async () => {
@@ -59,11 +58,11 @@ export default function Lobby() {
                const udata = ures?.data;
                const label = udata?.nombre || udata?.name || udata?.email || String(ownerId);
                setOwnerLabel(label);
-             } catch (e) {
+             } catch {
                // fallback: usar ownerId o ownerObj tal cual
                setOwnerLabel(String(ownerId));
              }
-           } catch (e) {
+           } catch {
             setOwnerLabel(null);
            }
          })();
@@ -104,10 +103,10 @@ export default function Lobby() {
         for (const c of arr) {
           if (c && (c.id !== undefined)) map[String(c.id)] = c.nombre || c.name || String(c.id);
         }
-        console.debug('[Lobby] loaded casas:', arr, 'map:', map);
+        console.info('[Lobby] loaded casas:', arr, 'map:', map);
         setCasasMap(map);
       } catch (e) {
-        console.debug('[Lobby] no se pudieron cargar casas', e);
+        console.info('[Lobby] no se pudieron cargar casas', e);
       }
     }
     loadCasas();
@@ -143,7 +142,7 @@ export default function Lobby() {
     }
 
     try {
-      const nuevo = !Boolean(jugador.listo);
+      const nuevo = !jugador.listo;
       const res = await api.put(`/jugadoresenpartidas/${jugador.id}`, { listo: nuevo });
       // actualizar estado localmente para evitar esperar al siguiente polling
       // la API a veces devuelve solo el registro de JugadorEnPartida sin la relación Usuario;
@@ -206,15 +205,15 @@ export default function Lobby() {
   }
 
   if (loading) {
-    console.debug('[Lobby] estado: loading');
+    console.info('[Lobby] estado: loading');
     return null;
   }
   if (error) {
-    console.debug('[Lobby] estado: error', error);
+    console.info('[Lobby] estado: error', error);
     return null;
   }
   if (!partida) {
-    console.debug('[Lobby] estado: partida no encontrada');
+    console.info('[Lobby] estado: partida no encontrada');
     return null;
   }
 
@@ -230,14 +229,14 @@ export default function Lobby() {
 
         <ul className="lobby-list">
           {jugadores.map((j) => {
-            const nombre = j.Usuario?.nombre || j.usuario?.nombre || ('Jugador ' + j.id);
+            const nombre = j.Usuario?.nombre || j.usuario?.nombre || (`Jugador ${  j.id}`);
             const isOwnerPlayer = Number(j.usuarioId || j.Usuario?.id || j.usuario?.id) === Number(owner?.id);
             // Obtener nombre de la casa: preferir relación incluida, luego objeto, luego mapa cargado, luego raw
             const casaNombre = j.Casa?.nombre || j.casa?.nombre || casasMap[String(j.casa)] || (j.casa ?? '-');
             return (
-              <li key={j.id} className="lobby-row">
-                <span className="lobby-player-name">{nombre}</span>
-                <span className="lobby-player-meta">Casa: {casaNombre}</span>
+              <li key={j.id} className='lobby-row'>
+                  <span className='lobby-player-name'>{nombre}</span>
+                  <span className='lobby-player-meta'>Casa: {casaNombre}</span>
                 <div className="lobby-actions">
                   {isOwner() && !isOwnerPlayer && (
                     <button className="btn danger small" onClick={() => expulsar(j)}>Expulsar</button>
@@ -245,7 +244,7 @@ export default function Lobby() {
                   {/* Botón 'Listo' - solo el propio usuario puede presionarlo */}
                   {String(user?.id) === String(j.usuarioId || j.Usuario?.id || j.usuario?.id) ? (
                     <button
-                      className={"btn small " + (j.listo ? 'ready' : 'not-ready')}
+                      className={`btn small ${j.listo ? 'ready' : 'not-ready'}`}
                       onClick={() => toggleListo(j)}
                       title={j.listo ? 'Marcar como no listo' : 'Marcar como listo'}
                     >
@@ -253,7 +252,7 @@ export default function Lobby() {
                     </button>
                   ) : (
                     // mostrar el estado visualmente para otros (sin permitir interacción)
-                    <button className={"btn small " + (j.listo ? 'ready' : 'not-ready')} disabled>
+                    <button className={`btn small ${j.listo ? 'ready' : 'not-ready'}`} disabled>
                       {j.listo ? 'Listo' : 'Listo'}
                     </button>
                   )}

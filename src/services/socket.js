@@ -86,7 +86,7 @@ const socketService = {
     try { socket.disconnect(); } catch (e) { void e; }
     socket = null;
     joinedPartidas.clear();
-  }
+  },
 };
 
 export default socketService;

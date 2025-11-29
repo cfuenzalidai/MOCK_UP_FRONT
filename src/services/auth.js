@@ -53,7 +53,7 @@ export async function changePassword({ userId, currentPassword, newPassword }) {
 	// Añadimos una cabecera para suprimir el logout automático en caso de 401
 	// porque 401 puede indicar "contraseña actual incorrecta" (caso de negocio).
 	return api.post(`/usuarios/${userId}/password`, { currentPassword, newPassword }, {
-		headers: { 'X-Suppress-Logout': '1' }
+		headers: { 'X-Suppress-Logout': '1' },
 	});
 }
 

@@ -17,10 +17,8 @@ export default function ChangePassword() {
   const timerRef = useRef(null);
   const newRef = useRef(null);
 
-  useEffect(() => {
-    return () => {
-      if (timerRef.current) clearTimeout(timerRef.current);
-    };
+  useEffect(() => () => {
+    if (timerRef.current) clearTimeout(timerRef.current);
   }, []);
 
   if (!user) {
