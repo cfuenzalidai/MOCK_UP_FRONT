@@ -2,7 +2,7 @@ import { useState } from 'react';
 import Territorio from '../components/Territorio';
 import '../assets/styles/Mapa.css';
 
-export default function Mapa({ bases = [], jugadores = [], planetas = [] }) {
+export default function Mapa({ bases = [], jugadores = [], planetas = [], naves = [], onTerritorioClick = null, selectingDestino = false }) {
   const cell = 80; 
   const [territorios, _setTerritorios] = useState(() => {
     const arr = [];
@@ -133,6 +133,9 @@ export default function Mapa({ bases = [], jugadores = [], planetas = [] }) {
       // Priorizar idxTablero (0-based) para evitar confusiones con ids de BD
       let esOrigen = false;
       let originOwnerLabel = null;
+      // prepare shipsOnThis default so it's always defined for geometries.push
+      let shipsOnThis = [];
+
       if (Array.isArray(planetas) && planetas.length > 0) {
         const planetMatch = planetas.find(p => {
           // PRIORIDAD: comparar idxTablero (0-based) con el índice de la casilla
@@ -166,6 +169,24 @@ export default function Mapa({ bases = [], jugadores = [], planetas = [] }) {
           originOwnerLabel = matchP?.Usuario?.nombre || matchP?.usuario?.nombre || matchP?.nombre || matchP?.name || null;
           if (originOwnerLabel && originOwnerLabel.length > 14) originOwnerLabel = `${originOwnerLabel.slice(0, 14)  }…`;
         }
+        // find ships located at this planet (if any)
+        shipsOnThis = [];
+        try {
+          if (Array.isArray(naves) && planetMatch) {
+            shipsOnThis = naves.filter(n => {
+              if (!n) return false;
+              // only show ships that have successfully traveled (backend marks them 'consumida')
+              if ((n.estado || '').toString().toLowerCase() !== 'consumida') return false;
+              const pid = n.planetaId;
+              if (pid === undefined || pid === null) return false;
+              // prefer matching by Planeta.id, then idxTablero, then territory id
+              if (planetMatch.id !== undefined && planetMatch.id !== null && String(pid) === String(planetMatch.id)) return true;
+              if (planetMatch.idxTablero !== undefined && planetMatch.idxTablero !== null && String(pid) === String(planetMatch.idxTablero)) return true;
+              if (String(pid) === String(t.id)) return true;
+              return false;
+            });
+          }
+        } catch (e) { shipsOnThis = []; }
       }
 
       // derive casaId from jugadores list if possible
@@ -182,22 +203,22 @@ export default function Mapa({ bases = [], jugadores = [], planetas = [] }) {
           : null;
         casaId = player?.casa || baseMatch?.casa || null;
       }
-      const geo = {
-        ...t,
-        pts,
-        pointsStr,
-        cx,
-        cy,
-        resourceColor,
-        hasBase,
-        base: baseMatch,
-        casaId,
-        esOrigen,
-        originOwnerLabel,
-        baseOwnerLabel,
-        up,
-      };
-      geometries.push(geo);
+      geometries.push({ 
+        ...t, 
+        pts, 
+        pointsStr, 
+        cx, 
+        cy, 
+        resourceColor, 
+        hasBase, base: baseMatch, 
+        casaId, 
+        esOrigen, 
+        originOwnerLabel, 
+        baseOwnerLabel, 
+        up, 
+        ships: shipsOnThis, 
+        territoryIndex 
+      });
     }
   }
 
@@ -283,7 +304,9 @@ export default function Mapa({ bases = [], jugadores = [], planetas = [] }) {
           pointingUp={g.up}
           cx={g.cx}
           cy={g.cy}
-          onClick={handleClick}
+          onClick={() => { handleClick(g.id); if (typeof onTerritorioClick === 'function') onTerritorioClick(g.territoryIndex, g); }}
+          selectingDestino={selectingDestino}
+          ships={g.ships}
           />
         ))}
 
