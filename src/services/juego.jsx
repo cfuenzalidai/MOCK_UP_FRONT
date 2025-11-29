@@ -109,6 +109,40 @@ export async function obtenerBases(partidaId) {
   }
 }
 
+export async function recoleccion(partidaId, jugadorId) {
+  if (!partidaId) throw new Error('partidaId es requerido');
+  if (!jugadorId) throw new Error('jugadorId es requerido');
+  try {
+    const res = await api.post(`/partidas/${partidaId}/${jugadorId}/recoleccion`);
+    return res.data;
+  } catch (err) {
+    const status = err?.response?.status;
+    if (status && [404, 405].includes(status)) {
+      // fallback
+    } else {
+      throw err;
+    }
+  }
+}
+
+export async function construirBase(partidaId, jugadorEnPartidaId, planetaId) {
+  if (!partidaId) throw new Error('partidaId es requerido');
+  if (!jugadorEnPartidaId) throw new Error('jugadorEnPartidaId es requerido');
+  if (!planetaId) throw new Error('planetaId es requerido');
+  try {
+    const res = await api.post(`/partidas/${partidaId}/${jugadorEnPartidaId}/${planetaId}/construirBase`);
+    return res.data;
+  } catch (err) {
+    const status = err?.response?.status;
+    if (status && [404, 405].includes(status)) {
+      // endpoint not available
+      return null;
+    }
+    throw err;
+  }
+}
+
+
 export async function obtenerPlanetas(partidaId) {
   if (!partidaId) throw new Error('partidaId es requerido');
   // Use the confirmed endpoint for planets and normalize response to an array
@@ -134,6 +168,26 @@ export async function obtenerPlanetas(partidaId) {
   }
 }
 
+
+export async function obtenerTiposDeRecursos() {
+  try {
+    const res = await api.get('/recursos');
+    const d = res.data;
+    if (Array.isArray(d)) return d;
+    if (Array.isArray(d.data)) return d.data;
+    return [];
+  } catch (err) {
+    const status = err?.response?.status;
+    if (status && [404, 405].includes(status)) {
+      // endpoint missing -> return empty list
+      return [];
+    }
+    throw err;
+  }
+}
+
+
+
 export async function obtenerRecursos(jugadorId) {
   if (!jugadorId) throw new Error('jugadorEnPartidaId es requerido');
   try {
@@ -148,20 +202,30 @@ export async function obtenerRecursos(jugadorId) {
       ? d.recursos
       : [];
 
-    // Construir mapa nombre -> cantidad
+    // Construir mapas útiles:
+    // - map: nombre original -> cantidad (conservar capitalización del servidor)
+    // - mapLower: nombre en minúsculas -> cantidad (comodín para lookups)
+    // - mapById: recursoId -> cantidad
     const map = {};
+    const mapLower = {};
+    const mapById = {};
+
     arr.forEach(item => {
       const nombre = item.Recurso?.nombre || item.recurso?.nombre || item.nombre || String(item.recursoId || item.id || 'recurso');
       const cantidad = typeof item.cantidad === 'number' ? item.cantidad : Number(item.cantidad) || 0;
+      const recursoId = item.recursoId || (item.Recurso && item.Recurso.id) || item.id || null;
+
       map[nombre] = cantidad;
+      mapLower[String(nombre).toLowerCase()] = cantidad;
+      if (recursoId != null) mapById[String(recursoId)] = cantidad;
     });
 
-    return { raw: arr, map };
+    return { raw: arr, map, mapLower, mapById };
   } catch (err) {
     const status = err?.response?.status;
     if (status && [404, 405].includes(status)) {
       // endpoint missing -> return empty
-      return { raw: [], map: {} };
+      return { raw: [], map: {}, mapLower: {}, mapById: {} };
     }
     throw err;
   }
