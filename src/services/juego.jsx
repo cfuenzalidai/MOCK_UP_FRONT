@@ -249,3 +249,20 @@ export async function obtenerNaves(partidaId, jugadorEnPartidaId) {
     throw err;
   }
 }
+
+export async function obtenerCasas() {
+  try {
+    const res = await api.get('/casas');
+    const d = res.data;
+    if (Array.isArray(d)) return d;
+    if (Array.isArray(d.data)) return d.data;
+    return [];
+  } catch (err) {
+    const status = err?.response?.status;
+    if (status && [404, 405].includes(status)) {
+      // endpoint missing -> return empty list
+      return [];
+    }
+    throw err;
+  }
+}

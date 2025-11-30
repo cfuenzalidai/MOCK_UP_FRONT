@@ -1032,11 +1032,28 @@ export default function Partida() {
       alert('No se pudo determinar la partida.');
       return;
     }
-    const planetaId = selectedTerritorio;
-    if (!planetaId) {
+    const selectedTile = selectedTerritorio;
+    if (!selectedTile) {
       alert('Selecciona un territorio donde construir la base.');
       return;
     }
+    // Resolver planeta real asociado a la casilla seleccionada. Backend espera el id de planeta
+    // (campo `id` o `planetaId` en los objetos de planeta), no el índice de tablero.
+    let planetaObj = null;
+    try {
+      planetaObj = (planetas || []).find(p => {
+        if (!p) return false;
+        // idxTablero puede ser 1..24; comparar tolerando strings/números
+        if (p.idxTablero !== undefined && p.idxTablero !== null && Number(p.idxTablero) === Number(selectedTile)) return true;
+        if (p.id !== undefined && p.id !== null && Number(p.id) === Number(selectedTile)) return true;
+        if (p.planetaId !== undefined && p.planetaId !== null && Number(p.planetaId) === Number(selectedTile)) return true;
+        // alguno guarda label en la forma 'T1' etc.
+        if (String(p.id) === String(selectedTile)) return true;
+        return false;
+      });
+    } catch (e) { planetaObj = null; }
+    // Determinar el planetaId real a enviar al backend
+    const planetaId = Number(planetaObj?.id ?? planetaObj?.planetaId ?? planetaObj?.idxTablero ?? selectedTile);
     const jugadorIdForRecursos = miJugador?.jugadorEnPartidaId || miJugador?.id || miJugador?.userId || miJugador?.usuarioId;
     if (!jugadorIdForRecursos) {
       alert('No se pudo determinar el jugador.');
@@ -1060,8 +1077,32 @@ export default function Partida() {
       setSelectedTerritorio(null);
     } catch (err) {
       console.error('Error al construir base', err);
-      const remoteMessage = err?.response?.data?.message || err?.message;
-      alert(remoteMessage || 'No se pudo construir la base. Revisa la consola.');
+      // Backend sends { error: { code, message, details?, reason? } }
+      const remote = err?.response?.data?.error || err?.response?.data || null;
+      if (remote) {
+        const code = remote.code || remote.error || null;
+        const message = remote.message || remote.msg || JSON.stringify(remote) || 'Error del servidor';
+        const reason = remote.reason || remote.detalle || remote.detail || null;
+        let text = '';
+        if (code) text += `[${code}] `;
+        text += message;
+        if (reason) {
+          text += '\nDetalles: ' + (typeof reason === 'object' ? JSON.stringify(reason) : String(reason));
+        }
+        if (remote.details) {
+          text += '\nMás info: ' + JSON.stringify(remote.details);
+        }
+        alert(text);
+      } else if (err?.response) {
+        // Fallback to raw response
+        try {
+          alert(JSON.stringify(err.response.data));
+        } catch (e) {
+          alert(err.message || 'No se pudo construir la base. Revisa la consola.');
+        }
+      } else {
+        alert(err.message || 'No se pudo construir la base. Revisa la consola.');
+      }
     }
   }
 
@@ -1094,20 +1135,8 @@ export default function Partida() {
         </div>
         {/* debug button removed */}
   <h3>Acciones</h3>
-  <button className="accion-btn">Construir Nave</button>
-  <button className="accion-btn">Mejorar Nave</button>
-  <button className="accion-btn">Usar Nave</button>
-  <button
-    className="accion-btn"
-    onClick={construirBase}
-    disabled={
-      partidaFinalizada || !selectedTerritorio || !esMiTurno ||
-      bases.some(b => String(b.planetaId) === String(selectedTerritorio) || String(b.planetaId) === `T${selectedTerritorio}`)
-    }
-  >
-    Construir Base
-  </button>
-  <button className="accion-btn">Origen</button>
+  
+
   {/* Acciones: cambiar apariencia cuando no es tu turno (clase + title) */}
   <button
     className={`accion-btn ${!esMiTurno ? 'accion-btn--blocked' : ''} ${buildingNave ? 'accion-btn--loading' : ''}`}
@@ -1139,7 +1168,7 @@ export default function Partida() {
   )}
   <button
     className={`accion-btn ${!esMiTurno ? 'accion-btn--blocked' : ''}`}
-    onClick={() => {}}
+    onClick={() => {construirBase();}}
     disabled={!esMiTurno}
     title={!esMiTurno ? 'No es tu turno' : 'Construir Base'}
   >Construir Base</button>
@@ -1153,50 +1182,39 @@ export default function Partida() {
 
       {/* Tablero central */}
       <div className="tablero">
-        <Mapa bases={bases} jugadores={jugadores} planetas={planetas} mapaId={partidaId} onSelect={setSelectedTerritorio} selectedId={selectedTerritorio} />
+        <div className="map-wrapper">
+          <Mapa
+            bases={bases}
+            jugadores={jugadores}
+            planetas={planetas}
+            mapaId={partidaId}
+            onSelect={setSelectedTerritorio}
+            selectedId={selectedTerritorio}
+            naves={naves}
+            onTerritorioClick={handleTerritorioSeleccionado}
+            selectingDestino={selectingDestino}
+          />
 
-        {/* Recursos debajo del tablero */}
-        <div className="recursos">
+          {/* Recursos debajo/derecha del mapa (único bloque) */}
+          <div className="recursos">
             <div className="recurso">
-                <img src={img_especia} alt="Especia" width={28} height={28} />
+              <img src={imgEspecia} alt="Especia" className="icon-recurso icon-recurso--especia" />
               <span>Especia: {recursos['Especia'] ?? recursos['especia'] ?? 0}</span>
             </div>
             <div className="recurso">
-                <img src={img_metal} alt="Metal" width={28} height={28} />
+              <img src={imgMetal} alt="Metal" className="icon-recurso icon-recurso--metal" />
               <span>Metal: {recursos['Metal'] ?? recursos['metal'] ?? 0}</span>
             </div>
             <div className="recurso">
-                <img src={img_agua} alt="Agua" width={28} height={28} />
+              <img src={imgAgua} alt="Agua" className="icon-recurso icon-recurso--agua" />
               <span>Agua: {recursos['Agua'] ?? recursos['agua'] ?? 0}</span>
             </div>
             <div className="recurso">
-                <img src={img_liebre} alt="Liebre" width={28} height={28} />
+              <img src={imgLiebre} alt="Liebre" className="icon-recurso icon-recurso--liebre" />
               <span>Liebre: {recursos['Liebre'] ?? recursos['liebre'] ?? 0}</span>
             </div>
-        </div>
-        <div className="map-wrapper">
-           <Mapa bases={bases} jugadores={jugadores} planetas={planetas} naves={naves} onTerritorioClick={handleTerritorioSeleccionado} selectingDestino={selectingDestino} />
- 
-           {/* Recursos posicionados a distancia fija respecto al mapa */}
-           <div className="recursos">
-             <div className="recurso">
-               <img src={imgEspecia} alt="Especia" className="icon-recurso icon-recurso--especia" />
-               <span>Especia: {recursos['Especia'] ?? recursos['especia'] ?? 0}</span>
-             </div>
-             <div className="recurso">
-               <img src={imgMetal} alt="Metal" className="icon-recurso icon-recurso--metal" />
-               <span>Metal: {recursos['Metal'] ?? recursos['metal'] ?? 0}</span>
-             </div>
-             <div className="recurso">
-               <img src={imgAgua} alt="Agua" className="icon-recurso icon-recurso--agua" />
-               <span>Agua: {recursos['Agua'] ?? recursos['agua'] ?? 0}</span>
-             </div>
-             <div className="recurso">
-               <img src={imgLiebre} alt="Liebre" className="icon-recurso icon-recurso--liebre" />
-               <span>Liebre: {recursos['Liebre'] ?? recursos['liebre'] ?? 0}</span>
-             </div>
-           </div>
           </div>
+        </div>
       </div>
 
       {/* Panel derecho (wrapper to keep the dice button visually below the gray panel) */}
