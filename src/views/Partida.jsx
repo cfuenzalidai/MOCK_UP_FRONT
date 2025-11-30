@@ -4,6 +4,7 @@ import { useParams } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import socketService from '../services/socket';
 import '../assets/styles/Partida.css';
+import Popup from '../components/Popup';
 import imgEspecia from '../assets/img/especia.png';
 import imgMetal from '../assets/img/metal.png';
 import imgAgua from '../assets/img/agua.png';
@@ -35,6 +36,11 @@ export default function Partida() {
   const [navesCount, setNavesCount] = useState({ basica: 0, intermedia: 0, avanzada: 0 });
   const [improving, setImproving] = useState(false);
   const [usingNave, setUsingNave] = useState(false);
+  const [portalOpen, setPortalOpen] = useState(false);
+  const [portalPay, setPortalPay] = useState('');
+  const [portalReceive, setPortalReceive] = useState('');
+  const [portalProcessing, setPortalProcessing] = useState(false);
+  const [tiposRecursos, setTiposRecursos] = useState([]);
   const [selectedShipForUse, setSelectedShipForUse] = useState(null);
   const [selectingDestino, setSelectingDestino] = useState(false);
   const prevIsMyTurnRef = useRef(false);
@@ -364,6 +370,23 @@ export default function Partida() {
     return () => (mounted = false);
   }, [miJugador, booting]);
 
+  // Cargar tipos de recursos para el selector del portal
+  useEffect(() => {
+    let mounted = true;
+    async function loadTipos() {
+      try {
+        const t = await juego.obtenerTiposDeRecursos();
+        if (!mounted) return;
+        setTiposRecursos((t || []).map(x => (x.nombre || x.name || x)));
+      } catch (e) {
+        console.warn('No se pudieron cargar tipos de recursos para el portal', e);
+        setTiposRecursos(['Especia','Metal','Agua','Liebre']);
+      }
+    }
+    loadTipos();
+    return () => (mounted = false);
+  }, []);
+
   // Cargar naves del jugador actual y contar por nivel
   useEffect(() => {
     if (!miJugador || !partidaId) { setNavesCount({ basica: 0, intermedia: 0, avanzada: 0 }); return; }
@@ -657,14 +680,14 @@ export default function Partida() {
           return Number(val) === 5;
         });
         if (winner) {
-          const nombre = winner.nombre || winner.name || winner.usuario || winner.username || `Jugador ${winner.id || winner.userId || ''}`;
+          const nombre = user.nombre;
           setPartidaFinalizada(true);
           setGanador(nombre);
           alert(`Partida finalizada. Ganador: ${nombre}`);
           // redirigir al inicio después de 2s
           setTimeout(() => {
             window.location.href = '/';
-          }, 2000);
+          }, 5000);
           return; // no seguir con el flujo normal
         }
 
@@ -1140,6 +1163,57 @@ export default function Partida() {
     }
   }
 
+  async function openPortal() {
+    if (!miJugador) return alert('No se pudo determinar tu jugador en la partida.');
+    setPortalPay(''); setPortalReceive(''); setPortalOpen(true);
+  }
+
+  async function submitPortal() {
+    if (!miJugador) return alert('No se pudo determinar tu jugador.');
+    if (!portalPay || !portalReceive) return alert('Selecciona el recurso a pagar (2 unidades) y el recurso a recibir.');
+    const actorId = miJugador.jugadorEnPartidaId || miJugador.id || miJugador.userId || miJugador.usuarioId;
+    if (!actorId) return alert('No se pudo determinar tu id de jugador.');
+
+    // verificar disponibilidad local de recursos (cada pago se asume cantidad 1)
+    const avail = (name) => recursos[name] ?? recursos[name.toLowerCase()] ?? 0;
+    if (avail(portalPay) < 2) return alert(`No tienes suficiente ${portalPay} (necesitas 2).`);
+    if (String(portalPay) === String(portalReceive)) return alert('No puedes recibir el mismo recurso que pagas. Elige otro recurso a recibir.');
+
+    setPortalProcessing(true);
+    try {
+      const pagos = [ { nombre: portalPay, cantidad: 2 } ];
+      const pedido = { nombre: portalReceive, cantidad: 1 };
+      const res = await juego.portalExchange(partidaId, actorId, pagos, pedido);
+
+      if (res === null) {
+        // Endpoint no disponible: aplicar cambio localmente como fallback (optimistic)
+        const newMap = { ...recursos };
+        const dec = (n, amount=1) => { const cur = newMap[n] ?? newMap[n.toLowerCase()] ?? 0; newMap[n] = Math.max(0, (Number(cur)||0) - amount); };
+        dec(portalPay, 2);
+        newMap[portalReceive] = (Number(newMap[portalReceive] ?? newMap[portalReceive.toLowerCase()] ?? 0) || 0) + 1;
+        setRecursos(newMap);
+        alert('Intercambio aplicado localmente (backend no soporta portal).');
+      } else {
+        // refrescar recursos desde servidor
+        try {
+          const updated = await juego.obtenerRecursos(actorId);
+          setRecursos(updated.map || {});
+        } catch (e) { console.warn('No se pudieron refrescar recursos tras portal', e); }
+        try { await cargarPuntajes(); } catch (e) { /* ignore */ }
+        alert('Intercambio realizado.');
+      }
+      // emitir jugada creada para notificar a otros clientes si procede
+      try { socketService.emit('jugada:creada', { partidaId, tipo: 'portal', actorId }); } catch (e) { void e; }
+      setPortalOpen(false);
+    } catch (err) {
+      console.error('Error en portalExchange', err);
+      const remote = err?.response?.data || err?.message || err;
+      alert('No se pudo realizar el intercambio: ' + JSON.stringify(remote));
+    } finally {
+      setPortalProcessing(false);
+    }
+  }
+
   return (
     <div className="partida-container">
       {partidaFinalizada && ganador && (
@@ -1208,10 +1282,10 @@ export default function Partida() {
   >Construir Base</button>
   <button
     className={`accion-btn ${!esMiTurno ? 'accion-btn--blocked' : ''}`}
-    onClick={() => {}}
+    onClick={openPortal}
     disabled={!esMiTurno}
-    title={!esMiTurno ? 'No es tu turno' : 'Origen'}
-  >Origen</button>
+    title={!esMiTurno ? 'No es tu turno' : 'Intercambio'}
+  >Intercambio</button>
       </div>
 
       {/* Tablero central */}
@@ -1250,6 +1324,30 @@ export default function Partida() {
           </div>
         </div>
       </div>
+      {/* Portal modal */}
+      <Popup open={portalOpen} title="Intercambio" onClose={() => setPortalOpen(false)}>
+        <p>Elige un recurso para pagar (2 unidades) y un recurso a recibir (1 unidad).</p>
+        <div style={{ display: 'flex', gap: 8, marginBottom: 8 }}>
+          <div style={{ flex: 1 }}>
+            <label>Pagar (2 unidades)</label>
+            <select value={portalPay} onChange={e => setPortalPay(e.target.value)} style={{ width: '100%' }}>
+              <option value="">--</option>
+              {tiposRecursos.map((t,i) => (<option key={i} value={t}>{t}</option>))}
+            </select>
+          </div>
+        </div>
+        <div style={{ marginBottom: 12 }}>
+          <label>Recibir</label>
+          <select value={portalReceive} onChange={e => setPortalReceive(e.target.value)} style={{ width: '100%' }}>
+            <option value="">--</option>
+            {tiposRecursos.map((t,i) => (<option key={i} value={t}>{t}</option>))}
+          </select>
+        </div>
+        <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end' }}>
+          <button className="accion-btn" onClick={() => setPortalOpen(false)} disabled={portalProcessing}>Cancelar</button>
+          <button className="accion-btn" onClick={submitPortal} disabled={portalProcessing}>{portalProcessing ? 'Procesando...' : 'Intercambiar'}</button>
+        </div>
+      </Popup>
 
       {/* Panel derecho (wrapper to keep the dice button visually below the gray panel) */}
       <div className="panel-derecho-wrap">

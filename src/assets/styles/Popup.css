@@ -53,5 +53,16 @@
   color: #e9eef5;
 }
 
+/* Botones dentro del popup: texto blanco y fondo menos transparente */
+.popup-body .accion-btn {
+  color: #ffffff;
+  background: linear-gradient(180deg, rgba(11,34,55,0.68), rgba(11,34,55,0.6));
+  border: 1px solid rgba(255,255,255,0.06);
+}
+.popup-body .accion-btn:hover{
+  background: linear-gradient(180deg, rgba(11,34,55,0.78), rgba(11,34,55,0.7));
+  box-shadow: 0 6px 18px rgba(5,23,39,0.12);
+}
+
 /* Variantes pequeñas */
 .popup-card.small { max-width: 420px; }

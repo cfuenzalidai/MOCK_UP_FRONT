@@ -266,3 +266,53 @@ export async function obtenerCasas() {
     throw err;
   }
 }
+
+export async function portalExchange(partidaId, jugadorEnPartidaId, recursosPagados, recursoDeseado) {
+  if (!partidaId) throw new Error('partidaId es requerido');
+  if (!jugadorEnPartidaId) throw new Error('jugadorEnPartidaId es requerido');
+  // recursosPagados: [{ nombre, cantidad }]
+  // recursoDeseado: { nombre, cantidad }
+  try {
+    // intentar obtener turno activo si existe (algunos endpoints requieren turnoId)
+    let turnoId = null;
+    try {
+      const turno = await obtenerTurnoActivo(partidaId);
+      turnoId = turno?.id || turno?._id || null;
+    } catch (e) { /* ignore */ }
+
+    // Normalize inputs to simple from/to resource names
+    let fromResource = null;
+    let toResource = null;
+    if (typeof recursosPagados === 'string') {
+      fromResource = recursosPagados;
+    } else if (Array.isArray(recursosPagados) && recursosPagados.length > 0) {
+      fromResource = recursosPagados[0].nombre || recursosPagados[0].name || recursosPagados[0];
+    } else if (recursosPagados && typeof recursosPagados === 'object') {
+      fromResource = recursosPagados.nombre || recursosPagados.name || String(recursosPagados);
+    }
+    if (typeof recursoDeseado === 'string') {
+      toResource = recursoDeseado;
+    } else if (recursoDeseado && typeof recursoDeseado === 'object') {
+      toResource = recursoDeseado.nombre || recursoDeseado.name || String(recursoDeseado);
+    }
+
+    if (!fromResource || !toResource) throw new Error('fromResource and toResource are required');
+
+    const body = {
+      partidaId: Number(partidaId),
+      fromResource: String(fromResource).toLowerCase(),
+      toResource: String(toResource).toLowerCase(),
+    };
+
+    // Call dedicated portal endpoint (backend spec)
+    const res = await api.post('/portal/exchange', body);
+    return res.data;
+  } catch (err) {
+    const status = err?.response?.status;
+    if (status && [404, 405].includes(status)) {
+      // endpoint not available: let caller fallback to optimistic local update
+      return null;
+    }
+    throw err;
+  }
+}
