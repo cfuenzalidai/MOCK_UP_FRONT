@@ -1,13 +1,12 @@
-/* Estética alineada al lobby: usa el fondo .hero y panel translúcido */
-.perfil.hero{
+.crear.hero{
   display:flex;
   align-items:center;
   justify-content:center;
-  grid-template-columns: initial; /* anula grid del hero base */
+  grid-template-columns: initial;
   padding:32px 16px;
 }
 
-.perfil-panel{
+.crear-panel{
   width: clamp(520px, 52vw, 760px);
   padding: 28px 32px;
   border-radius: 26px;
@@ -17,19 +16,13 @@
   box-shadow: 0 6px 24px rgba(0,0,0,.28) inset, 0 10px 30px rgba(0,0,0,.22);
 }
 
-.perfil-title{
+.crear-title{
   margin: 0 0 16px;
   font-size: 28px;
   letter-spacing: .3px;
 }
 
-.perfil-msg{
-  margin: 0;
-  color: var(--muted);
-}
-
-/* Formulario */
-.perfil-form{ display:grid; gap:14px; }
+.crear-form{ display:grid; gap:14px; }
 
 .field{ display:grid; gap:8px; }
 .field label{ font-weight:600; font-size:14px; opacity:.95; }
@@ -48,6 +41,12 @@
   box-shadow: 0 0 0 2px rgba(126,200,255,.25);
 }
 
+.switch-row{ display:flex; gap:10px; align-items:center; }
+.switch-label{ color: var(--muted); }
+
+.radio-row{ display:flex; gap:16px; }
+.radio{ display:flex; gap:8px; align-items:center; }
+
 .error{
   padding:10px 12px; border-radius:10px;
   background: rgba(97,46,46,.25);
@@ -60,27 +59,16 @@
 }
 
 .btn{
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  /* asegurar que botones y enlaces compartan exactamente la misma fuente/tamaño/line-height */
-  font: inherit;
-  line-height: 1.2;
   height: 42px; padding: 0 16px; border-radius: 12px; font-weight: 700;
   border: 1px solid #3f4248; background: #232428; color: #eaeaf0;
 }
 .btn:hover{ filter: brightness(1.05); }
 .btn:disabled{ opacity:.7; cursor:not-allowed; }
-
 .btn.primary{
   background: #1f2023; border-color:#383a40;
   box-shadow: 0 10px 20px rgba(0,0,0,.25);
 }
-.btn.ghost{
-  background: transparent;
-}
+.btn.ghost{ background: transparent; }
 
-/* Responsive */
-@media (max-width: 600px){
-  .perfil-panel{ width: 92vw; padding: 22px; }
-}
+.field.disabled{ opacity:.6; }
+.field .hint{ color: var(--muted); font-size: 12px; }

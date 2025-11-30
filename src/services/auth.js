@@ -6,7 +6,7 @@ function parseJwt(token) {
 		if (parts.length !== 3) return null;
 		const payload = JSON.parse(atob(parts[1].replace(/-/g, '+').replace(/_/g, '/')));
 		return payload;
-	} catch (e) { return null; }
+	} catch (error) { void error; return null; }
 }
 
 export async function login({ email, password }) {
@@ -26,7 +26,7 @@ export async function me() {
 	const token = localStorage.getItem('token');
 	if (!token) throw new Error('No token');
 	const payload = parseJwt(token);
-	const userId = payload?.sub;
+	const userId = payload?.id || payload?.sub;
 	if (!userId) throw new Error('Invalid token payload');
 	const res = await api.get(`/usuarios/${userId}`);
 	return res.data;
@@ -36,7 +36,7 @@ export async function updateMe(payload) {
 	const token = localStorage.getItem('token');
 	if (!token) throw new Error('No token');
 	const payloadJwt = parseJwt(token);
-	const userId = payloadJwt?.sub;
+	const userId = payloadJwt?.id;
 	if (!userId) throw new Error('Invalid token payload');
 	return api.put(`/usuarios/${userId}`, payload);
 }
@@ -53,7 +53,7 @@ export async function changePassword({ userId, currentPassword, newPassword }) {
 	// Añadimos una cabecera para suprimir el logout automático en caso de 401
 	// porque 401 puede indicar "contraseña actual incorrecta" (caso de negocio).
 	return api.post(`/usuarios/${userId}/password`, { currentPassword, newPassword }, {
-		headers: { 'X-Suppress-Logout': '1' }
+		headers: { 'X-Suppress-Logout': '1' },
 	});
 }
 

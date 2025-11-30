@@ -32,7 +32,8 @@ export function AuthProvider({ children }) {
       try {
         const u = await authService.me();
         if (mounted) setUser(u);
-      } catch (err) {
+      } catch (error) {
+        console.error('Error durante bootstrap de sesión:', error);
         // invalid token
         clearToken();
         if (mounted) setUser(null);
