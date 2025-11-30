@@ -54,33 +54,7 @@ export default function Territorio({
       {/* polygon with no stroke; borders are drawn globally to avoid double-stroke gaps */}
       <polygon points={points} fill={displayFill} stroke="none" fillOpacity={1} />
       
-      {/* Mostrar icono de origen aun cuando no haya base */}
-      {esOrigen && typeof cx === 'number' && typeof cy === 'number' && !hasBase && (
-        (() => {
-          const iconSize = 12;
-          const iconX = cx - iconSize / 2;
-          const iconY = cy - (pointingUp ? 18 : -6); // ajustar si es necesario
-          return (
-            <>
-              <image href={origenImg} x={iconX} y={iconY} width={iconSize} height={iconSize} pointerEvents="none" />
-              {originOwnerLabel && (
-                <text
-                  x={cx}
-                  y={cy}
-                  textAnchor="middle"
-                  dominantBaseline="middle"
-                  fontSize={9}
-                  fill="#ffffff"
-                  pointerEvents="none"
-                  style={{ fontWeight: 700, userSelect: 'none' }}
-                >
-                  {originOwnerLabel}
-                </text>
-              )}
-            </>
-          );
-        })()
-      )}
+      {/* Logo arriba, nombre en el centro, origen abajo: renderizados más abajo para evitar duplicados */}
 
       {hasBase && typeof cx === 'number' && typeof cy === 'number' && (() => {
         // If casaId is provided, use it directly to pick the logo (preferred)
@@ -99,47 +73,19 @@ export default function Territorio({
         if (typeof casaId !== 'undefined' && casaId !== null) {
           const href = houseMap[Number(casaId)];
           if (href) {
-            // determine origin flag: prefer explicit prop, then try common planet locations inside `base` if present
-            const isOrigen = (() => {
-              if (esOrigen === true || esOrigen === 'true') return true;
-              try {
-                const p = base && (base.planeta || base.planet || base.planetData || base.planetaData);
-                const candidates = [
-                  esOrigen,
-                  base && base.esOrigen,
-                  p && (p.esOrigen || p.isOrigin || p.isOrigen || p.es_origen || p.is_origin),
-                  base && base.planeta_esOrigen,
-                  base && base.planetaEsOrigen,
-                ];
-                return candidates.some(v => v === true || v === 'true');
-              } catch { return false; }
-            })();
 
             const iconSize = 12;
-            const extraDown = pointingUp ? 0 : 12; // when triangle points down, move images lower (reduced to position images a bit higher)
-            const logoY = cy - size / 2 + extraDown;
+            const extraDown = pointingUp ? 0 : 6;
+            // place logo above the name (name will be at cy)
+            const logoY = cy - size - 8 + extraDown;
             const iconX = cx - iconSize / 2;
-            const iconY = cy - size / 2 - iconSize - 4 + extraDown; // place above the house logo, adjusted
+            const iconY = logoY - iconSize - 4;
             return (
               <>
                 <image href={href} x={cx - size/2} y={logoY} width={size} height={size} pointerEvents="none" />
-                {baseOwnerLabel && (
-                  <text
-                    x={cx}
-                    y={cy}
-                    textAnchor="middle"
-                    dominantBaseline="middle"
-                    fontSize={10}
-                    fill="#ffffff"
-                    pointerEvents="none"
-                    style={{ fontWeight: 700, userSelect: 'none' }}
-                  >
-                    {baseOwnerLabel}
-                  </text>
-                )}
-                {isOrigen && (
-                  <image href={origenImg} x={iconX} y={iconY} width={iconSize} height={iconSize} pointerEvents="none" />
-                )}
+                {/* Mostrar solo el logo de la casa y el nombre del propietario; el icono de origen
+                    se renderiza únicamente fuera del bloque de base cuando `esOrigen` es true
+                    (ver el condicional arriba que usa `esOrigen && !hasBase`). */}
               </>
             );
           }
@@ -178,45 +124,12 @@ export default function Territorio({
         }
 
         if (logo) {
-          const isOrigen = (() => {
-            if (esOrigen === true || esOrigen === 'true') return true;
-            try {
-              const p = base && (base.planeta || base.planet || base.planetData || base.planetaData);
-              const candidates = [
-                esOrigen,
-                base && base.esOrigen,
-                p && (p.esOrigen || p.isOrigin || p.isOrigen || p.es_origen || p.is_origin),
-                base && base.planeta_esOrigen,
-                base && base.planetaEsOrigen,
-              ];
-              return candidates.some(v => v === true || v === 'true');
-            } catch { return false; }
-          })();
-
           const iconSize = 12;
-          const extraDown = pointingUp ? 0 : 12;
-          const logoY = cy - size / 2 + extraDown;
-          const iconX = cx - iconSize / 2;
-          const iconY = cy - size / 2 - iconSize - 4 + extraDown;
+          const extraDown = pointingUp ? 0 : 6;
+          const logoY = cy - size - 8 + extraDown;
           return (
             <>
               <image href={logo} x={cx - size/2} y={logoY} width={size} height={size} pointerEvents="none" />
-              {baseOwnerLabel && (
-                <text
-                  x={cx}
-                  y={logoY + size + 12}
-                  textAnchor='middle'
-                  fontSize={10}
-                  fill='#ffffff'
-                  pointerEvents='none'
-                  style={{ fontWeight: 700 }}
-                >
-                  {baseOwnerLabel}
-                </text>
-              )}
-              {isOrigen && (
-                <image href={origenImg} x={iconX} y={iconY} width={iconSize} height={iconSize} pointerEvents="none" />
-              )}
             </>
           );
         }
@@ -224,33 +137,95 @@ export default function Territorio({
         return null;
       })()}
 
-        {/* Mostrar icono de nave(s) centrado en el territorio */}
+        {/* Mostrar hasta 2 naves pequeñas en la base del triángulo */}
         {Array.isArray(ships) && ships.length > 0 && typeof cx === 'number' && typeof cy === 'number' && (() => {
-          // elegir la nave a mostrar (priorizar avanzada > intermedia > basica)
-          const normalize = s => (s && s.nivel ? String(s.nivel).toLowerCase() : (s && s.level ? String(s.level).toLowerCase() : ''));
-          const order = ['avanzada', 'avanz', 'intermedia', 'inter', 'basica', 'bas'];
-          let chosen = ships[0];
-          for (const pref of order) {
-            const found = ships.find(s => normalize(s).includes(pref));
-            if (found) { chosen = found; break; }
+          // parse points string into vertices [[x,y],...]
+          let verts = [];
+          try {
+            verts = (points || '').split(' ').map(p => p.split(',').map(Number));
+          } catch (e) { verts = []; }
+          if (!Array.isArray(verts) || verts.length < 3) return null;
+
+          const size = 12; // small icons
+          const chooseHref = (s) => {
+            const lvl = (s && (s.nivel || s.level) ? String(s.nivel || s.level).toLowerCase() : '');
+            if (lvl.includes('avanz')) return nave_a;
+            if (lvl.includes('inter')) return nave_i;
+            return nave_b;
+          };
+
+          // determine base vertices: the two with largest y (pointingUp) or smallest y (pointingDown)
+          const indexed = verts.map((v, i) => ({ i, x: v[0], y: v[1] }));
+          const sortedByY = indexed.slice().sort((a,b) => a.y - b.y);
+          let baseIndices;
+          if (pointingUp) {
+            // base is the bottom edge -> two with largest y
+            baseIndices = [sortedByY[2].i, sortedByY[1].i];
+          } else {
+            // pointing down -> base is top edge -> two with smallest y
+            baseIndices = [sortedByY[0].i, sortedByY[1].i];
           }
 
-          // mapear nivel a imagen
-          const lvl = normalize(chosen);
-          let href = nave_b;
-          if (lvl.includes('avanz')) href = nave_a;
-          else if (lvl.includes('inter')) href = nave_i;
-          else href = nave_b;
+          const imgs = [];
+          const maxToShow = Math.min(2, ships.length);
+          for (let k = 0; k < maxToShow; k++) {
+            const vi = baseIndices[k % 2];
+            const v = verts[vi];
+            if (!v) continue;
+            // move slightly inward toward centroid (60% corner, 40% center)
+            const px = Math.round(v[0] * 0.6 + cx * 0.4);
+            const py = Math.round(v[1] * 0.6 + cy * 0.4);
+            const href = chooseHref(ships[k]);
+            imgs.push(<image key={`ship-${k}`} href={href} x={px - size/2} y={py - size/2} width={size} height={size} pointerEvents="none" />);
+          }
+          return (<>{imgs}</>);
+        })()}
 
-          const size = 18;
-          const x = cx - size / 2;
-          const y = cy - size / 2;
+      {/* Owner name centered, then origin icon below */}
+      {baseOwnerLabel && typeof cx === 'number' && typeof cy === 'number' && (
+        <>
+          <text
+            x={cx}
+            y={cy}
+            textAnchor="middle"
+            dominantBaseline="middle"
+            fontSize={10}
+            fill="#ffffff"
+            pointerEvents="none"
+            style={{ fontWeight: 700, userSelect: 'none' }}
+          >
+            {baseOwnerLabel}
+          </text>
+        </>
+      )}
+
+      {/* origen icon below name */}
+      {esOrigen && typeof cx === 'number' && typeof cy === 'number' && (
+        (() => {
+          const iconSize = 12;
+          const iconX = cx - iconSize / 2;
+          // move origin icon a bit closer to the name (slightly above previous position)
+          const iconY = cy + 6;
           return (
             <>
-              <image href={href} x={x} y={y} width={size} height={size} pointerEvents="none" />
+              <image href={origenImg} x={iconX} y={iconY} width={iconSize} height={iconSize} pointerEvents="none" />
+              {originOwnerLabel && originOwnerLabel !== baseOwnerLabel && (
+                <text
+                  x={cx}
+                  y={iconY + iconSize + 8}
+                  textAnchor="middle"
+                  fontSize={9}
+                  fill="#ffffff"
+                  pointerEvents="none"
+                  style={{ fontWeight: 700, userSelect: 'none' }}
+                >
+                  {originOwnerLabel}
+                </text>
+              )}
             </>
           );
-        })()}
+        })()
+      )}
 
       {showLabel && label && typeof cx === 'number' && typeof cy === 'number' && (
         <>

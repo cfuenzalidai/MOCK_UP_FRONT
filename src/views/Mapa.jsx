@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import Territorio from '../components/Territorio';
 import '../assets/styles/Mapa.css';
 
@@ -21,7 +21,7 @@ export default function Mapa({ bases = [], jugadores = [], planetas = [], mapaId
   const [selectedId, setSelectedId] = useState(propSelectedId || null);
 
   // Keep internal selection in sync when parent provides `selectedId` prop
-  React.useEffect(() => {
+  useEffect(() => {
     if (propSelectedId === undefined) return;
     if (propSelectedId !== selectedId) setSelectedId(propSelectedId);
   }, [propSelectedId]);
@@ -72,6 +72,18 @@ export default function Mapa({ bases = [], jugadores = [], planetas = [], mapaId
 
   const geometries = [];
   const pattern = [5, 7, 7, 5];
+  // build quick lookup of planets by their DB id, planetaId and idxTablero so we can relate bases and origen flags
+  const planetById = new Map();
+  const planetByIdx = new Map();
+  if (Array.isArray(planetas)) {
+    for (const p of planetas) {
+      try {
+        if (p && (p.id !== undefined && p.id !== null)) planetById.set(String(p.id), p);
+        if (p && (p.planetaId !== undefined && p.planetaId !== null)) planetById.set(String(p.planetaId), p);
+        if (p && (p.idxTablero !== undefined && p.idxTablero !== null)) planetByIdx.set(String(Number(p.idxTablero)), p);
+      } catch (e) { /* ignore */ }
+    }
+  }
   let idx = 0;
   let minX = Infinity,
     minY = Infinity,
@@ -109,63 +121,98 @@ export default function Mapa({ bases = [], jugadores = [], planetas = [], mapaId
       const cx = pts.reduce((s, p) => s + p[0], 0) / 3;
       const cy = pts.reduce((s, p) => s + p[1], 0) / 3;
       const t = territorios[idx++];
-      // Índice 0-based de la casilla en el tablero (coincide con p.idxTablero del backend)
-      const territoryIndex = idx - 1;
+      // use the territory's assigned id (1-based) as the canonical territoryIndex
+      const territoryIndex = Number(t.id);
 
       // only assign resourceColor if this label is in the target set
       const resourceColor = targetLabels.includes(t.label) ? assignment[t.label] || null : null;
 
       // determine whether this territory's planet has a base
       const baseMatch = Array.isArray(bases)
-        ? bases.find(b =>
-            String(b.planetaId) === String(t.id) ||
-            String(b.planetaId) === String(t.label) ||
-            String(b.planetaId) === String(t.label.replace(/^T/, '')),
-          )
+        ? bases.find(b => {
+            if (!b) return false;
+            // direct match: base.planetaId equals the tile id or label
+            if (String(b.planetaId) === String(t.id)) return true;
+            if (String(b.planetaId) === String(t.label)) return true;
+            if (String(b.planetaId) === String(t.label.replace(/^T/, ''))) return true;
+            // else, if base.planetaId references a planet DB id, check that planet's idxTablero
+            const linked = planetById.get(String(b.planetaId));
+            if (linked) {
+              if (linked.idxTablero !== undefined && linked.idxTablero !== null) {
+                if (String(linked.idxTablero) === String(t.id)) return true;
+                if (String(linked.idxTablero) === String(t.label.replace(/^T/, ''))) return true;
+              }
+            }
+            return false;
+          })
         : null;
       const hasBase = Boolean(baseMatch);
 
       // Resolver propietario del base (si existe)
       let baseOwnerLabel = null;
-      if (baseMatch && Array.isArray(jugadores) && jugadores.length > 0) {
-        const match = jugadores.find(p =>
-          String(p.id) === String(baseMatch.jugadorEnPartidaId) ||
-          String(p.jugadorEnPartidaId) === String(baseMatch.jugadorEnPartidaId) ||
-          String(p.id) === String(baseMatch.jugadorId) ||
-          String(p.usuarioId) === String(baseMatch.jugadorId) ||
-          String(p.userId) === String(baseMatch.jugadorId),
-        );
-        baseOwnerLabel = match?.Usuario?.nombre || match?.usuario?.nombre || match?.nombre || match?.name || null;
-        if (baseOwnerLabel && baseOwnerLabel.length > 14) baseOwnerLabel = `${baseOwnerLabel.slice(0, 14)  }…`;
+
+      if (baseMatch) {
+        const ownerKey =
+          baseMatch.jugadorEnPartidaId ??
+          baseMatch.jugadorId ??
+          baseMatch.userId ??
+          baseMatch.usuarioId ??
+          null;
+
+        let match = null;
+
+        if (ownerKey && Array.isArray(jugadores)) {
+          match = jugadores.find(j =>
+            String(j.id) === String(ownerKey) ||
+            String(j.jugadorEnPartidaId) === String(ownerKey) ||
+            String(j.usuarioId) === String(ownerKey)
+          );
+        }
+
+        baseOwnerLabel =
+          match?.Usuario?.nombre ||
+          match?.usuario?.nombre ||
+          match?.nombre ||
+          match?.name ||
+          (ownerKey ? `Jugador ${ownerKey}` : null);
+
+        if (baseOwnerLabel && baseOwnerLabel.length > 14)
+          baseOwnerLabel = baseOwnerLabel.slice(0, 14) + "…";
       }
 
       // derive esOrigen from `planetas` prop if available (planet objects have esOrigen)
       // Priorizar idxTablero (0-based) para evitar confusiones con ids de BD
-      let esOrigen = false;
+      t.esOrigen = false;
       let originOwnerLabel = null;
       // prepare shipsOnThis default so it's always defined for geometries.push
       let shipsOnThis = [];
 
       if (Array.isArray(planetas) && planetas.length > 0) {
-        const planetMatch = planetas.find(p => {
-          // PRIORIDAD: comparar idxTablero (0-based) con el índice de la casilla
+        let planetMatch = planetas.find(p => {
+          // PRIORIDAD: comparar idxTablero (1-based) con el índice de la casilla
           if (p.idxTablero !== undefined && p.idxTablero !== null) {
             if (Number(p.idxTablero) === Number(territoryIndex)) return true;
             if (String(p.idxTablero) === String(territoryIndex)) return true;
           }
-          // fallbacks adicionales por compatibilidad
-          if (p.id !== undefined && p.id !== null) {
-            if (String(p.id) === String(t.id)) return true;
-            if (String(p.id) === String(t.label)) return true;
-            if (String(p.id) === String(t.label.replace(/^T/, ''))) return true;
-          }
           if (p.planetaId !== undefined && p.planetaId !== null) {
             if (String(p.planetaId) === String(t.id)) return true;
+          }
+          if (p.id !== undefined && p.id !== null) {
+            if (String(p.id) === String(t.id)) return true;
           }
           return false;
         });
 
-        esOrigen = Boolean(planetMatch && (planetMatch.esOrigen === true || planetMatch.esOrigen === 'true' || planetMatch.isOrigin === true || planetMatch.isOrigin === 'true'));
+        // fallback: try lookup by idx map
+        if (!planetMatch) {
+          const byIdx = planetByIdx.get(String(territoryIndex));
+          if (byIdx) planetMatch = byIdx;
+        }
+
+        // Solo asignar esOrigen si encontramos un match Y ese planeta tiene esOrigen = true
+        if (planetMatch) {
+          t.esOrigen = Boolean(planetMatch.esOrigen === true || planetMatch.esOrigen === 'true' || planetMatch.isOrigin === true || planetMatch.isOrigin === 'true');
+        }
 
         // si hay planetMatch, intentar resolver su propietario (jugadorEnPartidaId)
         if (planetMatch && (planetMatch.jugadorEnPartidaId || planetMatch.jugadorId || planetMatch.userId || planetMatch.usuarioId)) {
@@ -176,8 +223,8 @@ export default function Mapa({ bases = [], jugadores = [], planetas = [], mapaId
             String(p.usuarioId) === String(ownerKey) ||
             String(p.userId) === String(ownerKey),
           );
-          originOwnerLabel = matchP?.Usuario?.nombre || matchP?.usuario?.nombre || matchP?.nombre || matchP?.name || null;
-          if (originOwnerLabel && originOwnerLabel.length > 14) originOwnerLabel = `${originOwnerLabel.slice(0, 14)  }…`;
+          originOwnerLabel = matchP?.nombre || matchP?.Usuario?.nombre || matchP?.usuario?.nombre || matchP?.nombre || matchP?.name || null;
+          if (originOwnerLabel && originOwnerLabel.length > 14) originOwnerLabel = `${originOwnerLabel.slice(0, 14)  }â€¦`;
         }
         // find ships located at this planet (if any)
         shipsOnThis = [];
@@ -185,8 +232,9 @@ export default function Mapa({ bases = [], jugadores = [], planetas = [], mapaId
           if (Array.isArray(naves) && planetMatch) {
             shipsOnThis = naves.filter(n => {
               if (!n) return false;
-              // only show ships that have successfully traveled (backend marks them 'consumida')
-              if ((n.estado || '').toString().toLowerCase() !== 'consumida') return false;
+              // show only ships that are at origin or stationed
+              const st = (n.estado || '').toString().toLowerCase();
+              if (st && !['en_origen', 'estacionada'].includes(st)) return false;
               const pid = n.planetaId;
               if (pid === undefined || pid === null) return false;
               // prefer matching by Planeta.id, then idxTablero, then territory id
@@ -202,6 +250,7 @@ export default function Mapa({ bases = [], jugadores = [], planetas = [], mapaId
       // derive casaId from jugadores list if possible
       let casaId = null;
       if (baseMatch) {
+        // try to extract casa id: prefer explicit base.casa (may be a numeric string), then player.casa
         const player = Array.isArray(jugadores)
           ? jugadores.find((p) =>
               String(p.id) === String(baseMatch.jugadorId) ||
@@ -211,7 +260,9 @@ export default function Mapa({ bases = [], jugadores = [], planetas = [], mapaId
               String(p.jugadorEnPartidaId) === String(baseMatch.jugadorEnPartidaId),
             )
           : null;
-        casaId = player?.casa || baseMatch?.casa || null;
+        const val = baseMatch?.casa ?? baseMatch?.casaId ?? player?.casa ?? player?.casaId ?? null;
+        const num = Number(val);
+        casaId = Number.isFinite(num) ? num : null;
       }
       geometries.push({ 
         ...t, 
@@ -222,7 +273,6 @@ export default function Mapa({ bases = [], jugadores = [], planetas = [], mapaId
         resourceColor, 
         hasBase, base: baseMatch, 
         casaId, 
-        esOrigen, 
         originOwnerLabel, 
         baseOwnerLabel, 
         up, 
