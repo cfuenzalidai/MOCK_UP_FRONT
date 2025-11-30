@@ -1,4 +1,4 @@
-# Frontenders — Entrega 3 (Frontend)
+# Frontenders — Entrega Final (Frontend)
 
 URL Netlify: https://apogeo.netlify.app/
 
