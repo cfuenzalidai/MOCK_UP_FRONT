@@ -95,6 +95,15 @@ const socketService = {
     if (!socket) return;
     socket.off(event, cb);
   },
+  emit(event, payload) {
+    try {
+      const s = socket || createSocket();
+      if (!s) return;
+      s.emit(event, payload);
+    } catch (e) {
+      console.error('Socket emit error:', e);
+    }
+  },
   disconnect() {
     if (!socket) return;
     try { socket.disconnect(); } catch (e) { void e; }

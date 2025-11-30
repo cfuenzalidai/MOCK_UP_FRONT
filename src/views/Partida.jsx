@@ -137,17 +137,36 @@ export default function Partida() {
       } catch (e) { console.error('Error manejando jugada:creada', e); }
     };
 
-    const onBaseCreada = (payload) => {
-      const base = payload?.base || payload;
-      if (!base) return;
-      if (String(base.partidaId || base.partida || partidaId) !== String(partidaId)) {
-        // no es para esta partida
+    const onBaseCreada = async (payload) => {
+      try {
+        const base = payload?.base || payload;
+        if (!base) return;
+        if (String(base.partidaId || base.partida || partidaId) !== String(partidaId)) return;
+        setBases(prev => {
+          const exists = prev.some(b => String(b.id || b._id) === String(base.id || base._id));
+          if (exists) return prev;
+          return [base, ...prev];
+        });
+
+        // Refrescar puntajes y turno activo para que el marcador suba sin recargar
+        try { await cargarPuntajes(); } catch (e) { console.warn('No se pudo refrescar puntajes tras base:creada', e); }
+        try { const turno = await juego.obtenerTurnoActivo(partidaId); setTurnoActivo(turno); } catch (e) { /* ignore */ }
+
+        // Si tenemos miJugador, refrescar recursos y contador de naves
+        try {
+          if (miJugador) {
+            const actor = miJugador.jugadorEnPartidaId || miJugador.id || miJugador.userId || miJugador.usuarioId;
+            if (actor) {
+              const r = await juego.obtenerRecursos(actor);
+              setRecursos(r.map || {});
+              const navesList = await juego.obtenerNaves(partidaId, actor);
+              setNavesCount(computeNavesCountFromList(navesList || []));
+            }
+          }
+        } catch (e) { console.warn('No se pudieron refrescar recursos/naves tras base:creada', e); }
+      } catch (e) {
+        console.error('Error manejando base:creada', e);
       }
-      setBases(prev => {
-        const exists = prev.some(b => String(b.id || b._id) === String(base.id || base._id));
-        if (exists) return prev;
-        return [base, ...prev];
-      });
     };
 
     const onBaseActualizada = (payload) => {
@@ -1075,6 +1094,21 @@ export default function Partida() {
       } catch (e) { console.warn('No se pudieron refrescar los planetas', e); }
       // clear selection
       setSelectedTerritorio(null);
+      // Emitir evento socket local para notificar a otros clientes (si el servidor
+      // no emite el evento de forma canónica). Usamos la respuesta si está disponible
+      // y caemos en un payload mínimo si no.
+      try {
+        const created = res?.data?.base || res?.base || res?.created || res;
+        const payload = created && typeof created === 'object'
+          ? { base: created, partidaId: partidaId }
+          : { partidaId: partidaId, planetaId, jugadorId: jugadorIdForRecursos };
+        socketService.emit('base:creada', payload);
+      } catch (e) {
+        console.warn('No se pudo emitir evento socket base:creada', e);
+      }
+      // Refrescar puntajes y turno activo inmediatamente (evita recarga manual)
+      try { await cargarPuntajes(); } catch (e) { console.warn('No se pudo refrescar puntajes tras crear base', e); }
+      try { const turno = await juego.obtenerTurnoActivo(partidaId); setTurnoActivo(turno); } catch (e) { /* ignore */ }
     } catch (err) {
       console.error('Error al construir base', err);
       // Backend sends { error: { code, message, details?, reason? } }
